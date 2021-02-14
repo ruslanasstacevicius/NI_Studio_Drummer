@@ -1,0 +1,1828 @@
+{***********************************************
+Native Instruments Drums - Kit C
+Grooves Page 1.4
+Author: Native Instruments
+Written by: Dinos Vallianatos
+Modified by: Thanos Kazakos
+Modified: July 16th, 2014
+*************************************************}
+
+on init
+	message("")
+
+	declare $init_LOADED := 1
+
+	make_perfview
+	set_ui_height_px(510)
+	set_script_title("Grooves")
+
+	set_key_pressed_support(1)
+	declare $snap_play
+	declare @snap_file_name
+	declare @snap_file_path
+	
+	declare $debug
+
+	
+	set_control_par_str($INST_ICON_ID, $CONTROL_PAR_PICTURE, "NID_instrument_icon")
+	
+	pgs_create_key(ACTION_TYPE, 1)	{key: 	-1 	-> 	Prep
+											0 	-> 	Purge
+											1	->	Mixer
+											2	->	Groove
+											3	->	Init
+											4	->	Randomize
+											5	-> 	Snare
+											6	->	Mapping}
+	pgs_create_key(GROOVE_DATA, 4)
+	pgs_create_str_key(GROOVE_NAME)
+	
+	declare const $FONT_1_ID := 12
+	declare const $FONT_2_ID := 13
+
+	declare $count_1
+	declare $count_2
+	declare $n_counter
+	declare $load_mf_id := -1
+	declare $init_flag := 0
+	declare @file_name
+	
+	declare const $APPLY_CHANGES_TIME := 10000			{time to wait when processing the MIDI object - to avoid conflicts with playback}
+	declare const $KNOB_ADJUSTMENT_TOLERANCE := 200000
+	declare const $LISTENER_RESOL := 2		{in times per beat}
+	declare const $LISTENER_BEAT_LENGTH_TICKS := 960 / $LISTENER_RESOL
+	
+	{MIDI file properties
+	_1 suffix --> file original state. for recalling the original state without the need to reload the file
+	_2 suffix --> latest state of the file / used as the edit buffer}
+	declare $mf_num_events
+
+	declare $mf_note_length
+
+	declare const $MIN_NOTE_LENGTH := 100000
+
+	declare %event_array_1[5 * 6500]	{columns: 	1st -> 	position
+													2nd -> 	status byte
+													3rd -> 	1st data byte
+													4th -> 	2nd data byte
+													5th -> 	for Note On events: 	the index of the respective Note Off event
+															for Note Off events:	the index of the respective Note On event
+															for other events:		-1}
+	declare %event_array_2[5 * 6500]
+	declare $mf_length_1				{the length of the MIDI file, ie the position of its last event - in ticks}
+	declare $mf_length_2
+	declare $track_idx := 0				{track idx used for all relevant commands}
+	{/MIDI file properties}
+	
+	{variables shared across multiple functions}
+	declare $old_pos
+	declare $pos_offset
+	declare $processing_flag
+	{/variables shared across multiple functions}
+	
+	{quantize function variables}
+	declare $quant_resol		{in ticks}
+	declare $temp_quant_resol
+	declare $quant_amount
+	declare %quant_resol_transform[6] := (480, 320, 240, 160, 120, 80)
+	{/quantize function variables}
+	
+	{swing function additions}
+	declare $swing_cycle	{in ticks}
+	declare $swing_amount
+	declare %swing_cycle_transform[6] := (960, 960, 480, 480, 240, 240)
+	{/swing function additions}
+	
+	{velocity_processing function variables}
+	declare $lower
+	declare $higher
+	{/velocity_processing fuction variables}
+	
+	{length function variables}
+	declare $stretch_amt
+	make_persistent($stretch_amt)
+	{/length function variables}
+	
+	{playback related variables}
+	declare $wrap_flag
+	declare $cur_listener_id
+	declare $event_vel
+	declare $prev_ext_song_pos
+	declare $cur_song_pos
+	declare $diff
+	declare $last_pos
+	declare $start_of_beat
+	declare $end_of_beat
+	declare $beat_start_time
+	declare %num_events_per_note[128]
+	declare %event_ids_per_note[128 * 10]
+	{/playback related variables}
+	
+	declare $old_play
+	declare $play_flag
+	declare $last_callback_id
+	
+	set_listener($NI_SIGNAL_TIMER_BEAT, $LISTENER_RESOL)
+	
+	declare @file_path
+	
+	{Control Group "Mixer"}
+		declare $count
+		declare $mixer_preset_flag
+		make_persistent($mixer_preset_flag)
+		read_persistent_var($mixer_preset_flag)
+		declare $mixer_init_flag := 1
+		
+		{declarations}
+		declare ui_menu $mixer_preset_menu_new
+		declare ui_menu $mixer_preset_menu
+		declare ui_button $mixer_preset_prev
+		declare ui_button $mixer_preset_next
+		{/declarations}
+		
+		{mixer_ui_ids}
+		declare %mixer_ui_id[5]
+		{cell 0 is empty for kludge reasons}
+		%mixer_ui_id[1] := get_ui_id($mixer_preset_menu_new)
+		%mixer_ui_id[2] := get_ui_id($mixer_preset_menu)
+		%mixer_ui_id[3] := get_ui_id($mixer_preset_prev)
+		%mixer_ui_id[4] := get_ui_id($mixer_preset_next)
+		{/mixer_ui_ids}
+		
+		{Pictures}
+		set_control_par_str(%mixer_ui_id[1],$CONTROL_PAR_PICTURE,"NID_header_dropdown_newpreset")
+		set_control_par_str(%mixer_ui_id[2],$CONTROL_PAR_PICTURE,"NID_header_dropdown_preset")
+		set_control_par_str(%mixer_ui_id[3],$CONTROL_PAR_PICTURE,"NID_header_btn_prev")
+		set_control_par_str(%mixer_ui_id[4],$CONTROL_PAR_PICTURE,"NID_header_btn_next")
+		{/Pictures}
+		
+		{help}
+		set_control_par_str(%mixer_ui_id[1],$CONTROL_PAR_HELP,"Mixer Preset Menu: Selects and loads settings for the whole mixer.")
+		set_control_par_str(%mixer_ui_id[2],$CONTROL_PAR_HELP,"Mixer Preset Menu: Selects and loads settings for the whole mixer.")
+		set_control_par_str(%mixer_ui_id[3],$CONTROL_PAR_HELP,"Previous Mixer Preset: Selects and loads settings for the whole mixer from the preset that is located before this one in the mixer preset menu.")
+		set_control_par_str(%mixer_ui_id[4],$CONTROL_PAR_HELP,"Next Mixer Preset: Selects and loads settings for the whole mixer from the preset that is located after this one in the mixer preset menu.")
+		{/help}
+		
+		{Font IDs & Text Position}
+		set_control_par(%mixer_ui_id[1], $CONTROL_PAR_FONT_TYPE,14)
+		set_control_par(%mixer_ui_id[1], $CONTROL_PAR_TEXTPOS_Y,30)
+		set_control_par(%mixer_ui_id[2], $CONTROL_PAR_FONT_TYPE,14)
+		set_control_par(%mixer_ui_id[2], $CONTROL_PAR_TEXTPOS_Y,4)
+		{/Font IDs & Text Position}
+
+		{Position}
+		move_control_px($mixer_preset_menu_new,10,28)
+		move_control_px($mixer_preset_menu,10,28)
+		move_control_px($mixer_preset_prev,139,13)
+		move_control_px($mixer_preset_next,155,13)
+		{/Position}
+		
+		{Size}
+		
+		set_control_par(%mixer_ui_id[1],$CONTROL_PAR_WIDTH,162)
+		set_control_par(%mixer_ui_id[1],$CONTROL_PAR_HEIGHT,21)
+		
+		set_control_par(%mixer_ui_id[2],$CONTROL_PAR_WIDTH,162)
+		set_control_par(%mixer_ui_id[2],$CONTROL_PAR_HEIGHT,21)
+		
+		set_control_par(%mixer_ui_id[3],$CONTROL_PAR_WIDTH,21)
+		set_control_par(%mixer_ui_id[3],$CONTROL_PAR_HEIGHT,21)
+		
+		set_control_par(%mixer_ui_id[4],$CONTROL_PAR_WIDTH,21)
+		set_control_par(%mixer_ui_id[4],$CONTROL_PAR_HEIGHT,21)
+		{/Size}
+		
+		{Text}
+		set_control_par_str(%mixer_ui_id[3],$CONTROL_PAR_TEXT,"")
+		set_control_par_str(%mixer_ui_id[4],$CONTROL_PAR_TEXT,"")
+		{/Text}
+	
+		{Populate Menu & Information}
+		
+		declare const $FACTORY_PRESETS := 12
+		declare const $USER_PRESETS := 30
+		
+		declare !fact_mixerpreset_names[$FACTORY_PRESETS]
+		!fact_mixerpreset_names[0] := "Pop"
+		!fact_mixerpreset_names[1] := "Funk"
+		!fact_mixerpreset_names[2] := "Jazz"
+		!fact_mixerpreset_names[3] := "Hard Rock"
+		!fact_mixerpreset_names[4] := "Metal"
+		!fact_mixerpreset_names[5] := "Blues & Country"
+		!fact_mixerpreset_names[6] := "Blues Rock"
+		!fact_mixerpreset_names[7] := "Ballad"
+		!fact_mixerpreset_names[8] := "Indie Rock"
+		!fact_mixerpreset_names[9] := "Indie Disco"
+		!fact_mixerpreset_names[10] := "Punk Rock"
+		!fact_mixerpreset_names[11] := "INIT"
+		
+		declare $mixer_check
+		
+		declare %kitc_mixer_userpresets[1]
+		read_persistent_var(%kitc_mixer_userpresets)
+		$mixer_check := load_array(%kitc_mixer_userpresets,1)
+		
+		declare !kitc_mixerpreset_names[$USER_PRESETS]		
+		load_array(!kitc_mixerpreset_names,1)
+	
+		$count := 0
+		while($count < $FACTORY_PRESETS)
+			add_menu_item($mixer_preset_menu_new,!fact_mixerpreset_names[$count],$count)
+			add_menu_item($mixer_preset_menu,!fact_mixerpreset_names[$count],$count)
+			inc($count)
+		end while
+		
+		add_menu_item($mixer_preset_menu_new,"---------",$FACTORY_PRESETS)
+		add_menu_item($mixer_preset_menu,"---------",$FACTORY_PRESETS)
+		if(%kitc_mixer_userpresets[0] = 0)
+			set_menu_item_visibility(%mixer_ui_id[1], $FACTORY_PRESETS, 0)
+			set_menu_item_visibility(%mixer_ui_id[2], $FACTORY_PRESETS, 0)
+		else
+			set_menu_item_visibility(%mixer_ui_id[1], $FACTORY_PRESETS, 1)	
+			set_menu_item_visibility(%mixer_ui_id[2], $FACTORY_PRESETS, 1)	
+		end if
+		
+		$count := $FACTORY_PRESETS + 1
+		while($count < $FACTORY_PRESETS + 1 + $USER_PRESETS)
+			add_menu_item($mixer_preset_menu,!kitc_mixerpreset_names[$count - $FACTORY_PRESETS - 1],$count)
+			add_menu_item($mixer_preset_menu_new,!kitc_mixerpreset_names[$count - $FACTORY_PRESETS - 1],$count)
+			if($count > $FACTORY_PRESETS + %kitc_mixer_userpresets[0])
+				set_menu_item_visibility(%mixer_ui_id[1], $count, 0)
+				set_menu_item_visibility(%mixer_ui_id[2], $count, 0)
+			end if
+			inc($count)
+		end while
+		
+		make_persistent($mixer_preset_menu)
+		read_persistent_var($mixer_preset_menu)
+		
+		declare $last_mixer_preset
+		$last_mixer_preset := $mixer_preset_menu
+		$mixer_preset_menu_new := $mixer_preset_menu
+		
+		if($mixer_preset_flag = 1)
+			set_control_par(%mixer_ui_id[2],$CONTROL_PAR_HIDE,$HIDE_WHOLE_CONTROL)
+		else
+			set_control_par(%mixer_ui_id[1],$CONTROL_PAR_HIDE,$HIDE_WHOLE_CONTROL)
+		end if
+		
+		declare $mixer_preset_load_id_1
+		declare $mixer_preset_load_id_2
+		
+		$mixer_init_flag := 0
+	
+		{/Populate Menu & Information}
+	{/Control Group "Mixer"}
+	
+	
+	{declarations}
+	declare ui_file_selector $file_selector
+	declare ui_button $play
+	declare ui_label $groove_display (1, 1)
+	declare ui_button $prev_groove
+	declare ui_button $next_groove
+	declare ui_slider $quantize (-100 , 100)
+	declare ui_slider $swing (0, 60)
+	declare ui_slider $velocity (-126, 127)
+	declare ui_button $half
+	declare ui_button $normal
+	declare ui_button $double
+	declare ui_slider $grid (0, 5)
+	declare ui_button $grid_up
+	declare ui_button $grid_dn
+	{/declarations}
+	
+	{ui_ids}
+	declare %ui_id[14]
+	%ui_id[0] := get_ui_id($file_selector)
+	%ui_id[1] := get_ui_id($play)
+	%ui_id[2] := get_ui_id($groove_display)
+	%ui_id[3] := get_ui_id($prev_groove)
+	%ui_id[4] := get_ui_id($next_groove)
+	%ui_id[5] := get_ui_id($quantize)
+	%ui_id[6] := get_ui_id($swing)
+	%ui_id[7] := get_ui_id($velocity)
+	%ui_id[8] := get_ui_id($half)
+	%ui_id[9] := get_ui_id($normal)
+	%ui_id[10] := get_ui_id($double)
+	%ui_id[11] := get_ui_id($grid)
+	%ui_id[12] := get_ui_id($grid_up)
+	%ui_id[13] := get_ui_id($grid_dn)
+	{/ui_ids}
+	
+	{Pictures}
+	set_control_par_str(%ui_id[1],$CONTROL_PAR_PICTURE,"NID_header_btn_play")
+	set_control_par_str(%ui_id[2],$CONTROL_PAR_PICTURE,"NID_header_button_drag")
+	set_control_par_str(%ui_id[3],$CONTROL_PAR_PICTURE,"NID_header_btn_prev")
+	set_control_par_str(%ui_id[4],$CONTROL_PAR_PICTURE,"NID_header_btn_next")
+	set_control_par_str(%ui_id[5],$CONTROL_PAR_PICTURE,"NID_mixer_knb_black91")
+	set_control_par_str(%ui_id[6],$CONTROL_PAR_PICTURE,"NID_mixer_knb_black91")
+	set_control_par_str(%ui_id[7],$CONTROL_PAR_PICTURE,"NID_mixer_knb_black91")
+	set_control_par_str(%ui_id[8],$CONTROL_PAR_PICTURE,"NID_grooves_btn_tempo_half")
+	set_control_par_str(%ui_id[9],$CONTROL_PAR_PICTURE,"NID_grooves_btn_tempo_normal")
+	set_control_par_str(%ui_id[10],$CONTROL_PAR_PICTURE,"NID_grooves_btn_tempo_double")
+	set_control_par_str(%ui_id[11],$CONTROL_PAR_PICTURE,"NID_grooves_slider_grid")
+	set_control_par_str(%ui_id[12],$CONTROL_PAR_PICTURE,"NID_options_btn_range_up")
+	set_control_par_str(%ui_id[13],$CONTROL_PAR_PICTURE,"NID_options_btn_range_down")
+	{/Pictures}
+
+	{Mouse Behaviour}
+	set_control_par(%ui_id[5], $CONTROL_PAR_MOUSE_BEHAVIOUR, -500)
+	set_control_par(%ui_id[6], $CONTROL_PAR_MOUSE_BEHAVIOUR, -500)
+	set_control_par(%ui_id[7], $CONTROL_PAR_MOUSE_BEHAVIOUR, -500)
+	set_control_par(%ui_id[11], $CONTROL_PAR_MOUSE_BEHAVIOUR, -500)
+	{/Mouse Behaviour}
+	
+	{Font IDs & Text Position}
+	set_control_par(%ui_id[2], $CONTROL_PAR_FONT_TYPE, $FONT_2_ID)
+	set_control_par(%ui_id[2], $CONTROL_PAR_TEXTPOS_Y,3)
+	{/Font IDs & Text Position}
+	
+	{BG}
+	{set_control_par(%ui_id[2], $CONTROL_PAR_HIDE, $HIDE_PART_BG)}
+	{/BG}
+	
+	{Position}
+	set_control_par(%ui_id[0],$CONTROL_PAR_POS_X,22)
+    set_control_par(%ui_id[0],$CONTROL_PAR_POS_Y,101)
+	
+	set_control_par(%ui_id[1],$CONTROL_PAR_POS_X,458)
+	set_control_par(%ui_id[1],$CONTROL_PAR_POS_Y,11)
+	
+	set_control_par(%ui_id[2],$CONTROL_PAR_POS_X,484)
+	set_control_par(%ui_id[2],$CONTROL_PAR_POS_Y,32)
+	
+	set_control_par(%ui_id[3],$CONTROL_PAR_POS_X,589)
+	set_control_par(%ui_id[3],$CONTROL_PAR_POS_Y,13)
+	
+	set_control_par(%ui_id[4],$CONTROL_PAR_POS_X,605)
+	set_control_par(%ui_id[4],$CONTROL_PAR_POS_Y,13)
+	
+	set_control_par(%ui_id[5],$CONTROL_PAR_POS_X,54)
+	set_control_par(%ui_id[5],$CONTROL_PAR_POS_Y,449)
+
+	set_control_par(%ui_id[6],$CONTROL_PAR_POS_X,195)
+	set_control_par(%ui_id[6],$CONTROL_PAR_POS_Y,449)
+	
+	set_control_par(%ui_id[7],$CONTROL_PAR_POS_X,295)
+	set_control_par(%ui_id[7],$CONTROL_PAR_POS_Y,449)
+	
+	set_control_par(%ui_id[8],$CONTROL_PAR_POS_X,400)
+	set_control_par(%ui_id[8],$CONTROL_PAR_POS_Y,452)
+	
+	set_control_par(%ui_id[9],$CONTROL_PAR_POS_X,459)
+	set_control_par(%ui_id[9],$CONTROL_PAR_POS_Y,452)
+	
+	set_control_par(%ui_id[10],$CONTROL_PAR_POS_X,516)
+	set_control_par(%ui_id[10],$CONTROL_PAR_POS_Y,452)
+	
+	set_control_par(%ui_id[11],$CONTROL_PAR_POS_X,122)
+	set_control_par(%ui_id[11],$CONTROL_PAR_POS_Y,464)
+	
+	set_control_par(%ui_id[12],$CONTROL_PAR_POS_X,121)
+	set_control_par(%ui_id[12],$CONTROL_PAR_POS_Y,453)
+	
+	set_control_par(%ui_id[13],$CONTROL_PAR_POS_X,121)
+	set_control_par(%ui_id[13],$CONTROL_PAR_POS_Y,476)
+	{/Position}
+	
+	{Size}		
+	set_control_par(%ui_id[0],$CONTROL_PAR_WIDTH,586)
+    set_control_par(%ui_id[0],$CONTROL_PAR_HEIGHT,310)
+	
+	set_control_par(%ui_id[1],$CONTROL_PAR_WIDTH,28)
+	set_control_par(%ui_id[1],$CONTROL_PAR_HEIGHT,42)
+	
+	set_control_par(%ui_id[2],$CONTROL_PAR_WIDTH,135)
+	set_control_par(%ui_id[2],$CONTROL_PAR_HEIGHT,16)
+	
+	set_control_par(%ui_id[3],$CONTROL_PAR_WIDTH,19)
+	set_control_par(%ui_id[3],$CONTROL_PAR_HEIGHT,18)
+	
+	set_control_par(%ui_id[4],$CONTROL_PAR_WIDTH,19)
+	set_control_par(%ui_id[4],$CONTROL_PAR_HEIGHT,18)
+	
+	set_control_par(%ui_id[5],$CONTROL_PAR_WIDTH,28)
+	set_control_par(%ui_id[5],$CONTROL_PAR_HEIGHT,42)
+
+	set_control_par(%ui_id[6],$CONTROL_PAR_WIDTH,14)
+	set_control_par(%ui_id[6],$CONTROL_PAR_HEIGHT,14)
+	
+	set_control_par(%ui_id[7],$CONTROL_PAR_WIDTH,18)
+	set_control_par(%ui_id[7],$CONTROL_PAR_HEIGHT,18)
+	
+	set_control_par(%ui_id[8],$CONTROL_PAR_WIDTH,62)
+	set_control_par(%ui_id[8],$CONTROL_PAR_HEIGHT,38)
+	
+	set_control_par(%ui_id[9],$CONTROL_PAR_WIDTH,62)
+	set_control_par(%ui_id[9],$CONTROL_PAR_HEIGHT,38)
+	
+	set_control_par(%ui_id[10],$CONTROL_PAR_WIDTH,62)
+	set_control_par(%ui_id[10],$CONTROL_PAR_HEIGHT,38)
+	
+	set_control_par(%ui_id[11],$CONTROL_PAR_WIDTH,50)
+	set_control_par(%ui_id[11],$CONTROL_PAR_HEIGHT,13)
+	
+	set_control_par(%ui_id[12],$CONTROL_PAR_WIDTH,50)
+	set_control_par(%ui_id[12],$CONTROL_PAR_HEIGHT,13)
+	
+	set_control_par(%ui_id[13],$CONTROL_PAR_WIDTH,75)
+	set_control_par(%ui_id[13],$CONTROL_PAR_HEIGHT,13)
+	{/Size}
+	
+	{Text}
+	set_control_par_str(%ui_id[1],$CONTROL_PAR_TEXT,"")
+	set_control_par_str(%ui_id[3],$CONTROL_PAR_TEXT,"")
+	set_control_par_str(%ui_id[4],$CONTROL_PAR_TEXT,"")
+	set_control_par_str(%ui_id[8],$CONTROL_PAR_TEXT,"")
+	set_control_par_str(%ui_id[9],$CONTROL_PAR_TEXT,"")
+	set_control_par_str(%ui_id[10],$CONTROL_PAR_TEXT,"")
+	set_control_par_str(%ui_id[12],$CONTROL_PAR_TEXT,"")
+	set_control_par_str(%ui_id[13],$CONTROL_PAR_TEXT,"")
+	{/Text}
+	
+	{Help Text}
+	set_control_par_str(%ui_id[0],$CONTROL_PAR_HELP,"Groove Browser: The first column shows a list of Genre folders. The second column shows the list of Grooves and Fills availabhle for that Genre. The third column is a list of all Variations for the selected Groove of Fill. Double click a groove to select it.")
+	set_control_par_str(%ui_id[1],$CONTROL_PAR_HELP,"Play: Use this control to start or stop playback. Playback is always following host song position if available.")
+	set_control_par_str(%ui_id[2],$CONTROL_PAR_HELP,"Active Groove: This is the area where the active groove or fill is displayed at any time. This is also the area from which you can drag the groove to your host project.")
+	set_control_par_str(%ui_id[3],$CONTROL_PAR_HELP,"Previous Groove: Use this control to skip to the previous variation of the active groove or fill.")
+	set_control_par_str(%ui_id[4],$CONTROL_PAR_HELP,"Next Groove: Use this control to skip to the next variation of the active groove or fill.")
+	set_control_par_str(%ui_id[5],$CONTROL_PAR_HELP,"Tightness: Changes the amount of groove in the beat.  The center value is the original sounding played beat.  All the way to the right, the beat is completely quantized.  As the knob is turned to the left, the beat gets more and more loose until it sounds very sloppy when turned all the way to the left.")
+	set_control_par_str(%ui_id[6],$CONTROL_PAR_HELP,"Swing: Adjusts the amount of swing in the beat.  Swing allows for rhythmic shifting of a groove where the first note in a series plays longer than the one that follows.  When the knob is all the way to the right, the swing is the most severe, while the leftmost setting leaves the original MIDI groove unaffected.")
+	set_control_par_str(%ui_id[7],$CONTROL_PAR_HELP,"Velocity: Changes the range of the velocities in the grooves.  At the center position, the original groove is unaffected. As the knob is turned to the right, the range is compressed to the high range. Similarly, when the knob is turned to the left the velocities are compressed to the low range.")
+	set_control_par_str(%ui_id[8],$CONTROL_PAR_HELP,"Tempo: These buttons allow you to immediately change the tempo of the groove or fill to be half the speed or double the speed of the originals.  This can be useful when a song is recorded at a high BPM tempo, but the feel of the song is actually half of that speed (or vice versa).")
+	set_control_par_str(%ui_id[9],$CONTROL_PAR_HELP,"Tempo: These buttons allow you to immediately change the tempo of the groove or fill to be half the speed or double the speed of the originals.  This can be useful when a song is recorded at a high BPM tempo, but the feel of the song is actually half of that speed (or vice versa).")
+	set_control_par_str(%ui_id[10],$CONTROL_PAR_HELP,"Tempo: These buttons allow you to immediately change the tempo of the groove or fill to be half the speed or double the speed of the originals.  This can be useful when a song is recorded at a high BPM tempo, but the feel of the song is actually half of that speed (or vice versa).")
+	set_control_par_str(%ui_id[11],$CONTROL_PAR_HELP,"Grid: Set the grid for the Tightness & Swing controls.")
+	set_control_par_str(%ui_id[12],$CONTROL_PAR_HELP,"Grid: Set the grid for the Tightness & Swing controls.")
+	set_control_par_str(%ui_id[13],$CONTROL_PAR_HELP,"Grid: Set the grid for the Tightness & Swing controls.")
+	{/Help Text}
+	
+	{Automation Names}
+	set_control_par_str(%ui_id[5],$CONTROL_PAR_AUTOMATION_NAME,"Tightness")
+	set_control_par_str(%ui_id[6],$CONTROL_PAR_AUTOMATION_NAME,"Swing")
+	set_control_par_str(%ui_id[7],$CONTROL_PAR_AUTOMATION_NAME,"Velocity")
+	set_control_par_str(%ui_id[11],$CONTROL_PAR_AUTOMATION_NAME,"Grid")
+	{/Automation Names}
+
+	{Other}
+	set_control_par(%ui_id[0], $CONTROL_PAR_FILE_TYPE, $NI_FILE_TYPE_MIDI)
+    set_control_par_str(%ui_id[0], $CONTROL_PAR_BASEPATH, get_folder($GET_FOLDER_LIBRARY_DIR) & "MIDI Files")
+	set_control_par(%ui_id[0],$CONTROL_PAR_COLUMN_WIDTH,194)
+	set_control_par(%ui_id[2],$CONTROL_PAR_DND_BEHAVIOUR,1) 
+	{/Other}
+	
+	{Default Values}
+	set_control_par(%ui_id[5], $CONTROL_PAR_DEFAULT_VALUE, 0)
+	set_control_par(%ui_id[6], $CONTROL_PAR_DEFAULT_VALUE, 0)
+	set_control_par(%ui_id[7], $CONTROL_PAR_DEFAULT_VALUE, 0)
+	set_control_par(%ui_id[11], $CONTROL_PAR_DEFAULT_VALUE, 2)
+	{/Default Values}
+	
+	{init}
+	make_persistent(@file_path)
+	make_persistent(@file_name)
+	make_persistent($grid)
+	make_persistent($quantize)
+	make_persistent($swing)
+	make_persistent($velocity)
+	make_persistent($half)
+	make_persistent($normal)
+	make_persistent($double)
+	read_persistent_var(@file_path)
+	read_persistent_var($grid)
+	read_persistent_var($quantize)
+	read_persistent_var($swing)
+	read_persistent_var($velocity)
+	read_persistent_var($half)
+	read_persistent_var($normal)
+	read_persistent_var($double)
+	$quant_resol := %quant_resol_transform[$grid]
+	$swing_cycle := %swing_cycle_transform[$grid]	
+	{$quantize := 0
+	$swing := 0
+	$velocity := 0
+	$half := 0
+	$normal := 1
+	$double := 0}
+	$swing_amount := $swing
+	$quant_amount := $quantize
+	if ($velocity < 0)
+		$lower := 1
+		$higher := 127 + $velocity
+	else
+		$lower := $velocity
+		$higher := 127
+	end if
+
+	declare $first_time_ever_flag := 1
+	make_persistent($first_time_ever_flag)
+	read_persistent_var($first_time_ever_flag)
+	if ($first_time_ever_flag = 1)
+		@file_path := get_folder($GET_FOLDER_LIBRARY_DIR) & "MIDI Files/07 Blues Rock/02 Groove 90BPM/04 16th Hat Both.mid"
+	end if
+
+	set_control_par_str(%ui_id[0], $CONTROL_PAR_FILEPATH, @file_path)
+	set_text($play, "")
+	$init_flag := 1
+	$load_mf_id := load_midi_file(@file_path)
+
+	@snap_file_path := @file_path
+	@snap_file_name := @file_name
+
+	make_instr_persistent(@snap_file_path)
+	make_instr_persistent(@snap_file_name)
+	{/init}
+	
+	{Mapping}
+	declare %inverse_mapping_data[128]
+	make_persistent(%inverse_mapping_data)
+	
+	declare %default_mapping_data[128] := (-1)
+	%default_mapping_data[22] := 74
+	%default_mapping_data[23] := 82
+	%default_mapping_data[24] := 78
+	%default_mapping_data[25] := 86
+	%default_mapping_data[26] := 90
+	%default_mapping_data[27] := 108
+	%default_mapping_data[28] := 109
+	%default_mapping_data[29] := 111
+	%default_mapping_data[30] := 112
+	%default_mapping_data[31] := 102
+	%default_mapping_data[32] := 103
+	%default_mapping_data[33] := 100
+	%default_mapping_data[34] := 101
+	%default_mapping_data[35] := 99
+	%default_mapping_data[36] := 0
+	%default_mapping_data[37] := 11
+	%default_mapping_data[38] := 4
+	%default_mapping_data[39] := 10
+	%default_mapping_data[40] := 7
+	%default_mapping_data[41] := 50
+	%default_mapping_data[42] := 22
+	%default_mapping_data[43] := 50
+	%default_mapping_data[44] := 28
+	%default_mapping_data[45] := 43
+	%default_mapping_data[46] := 30
+	%default_mapping_data[47] := 36
+	%default_mapping_data[48] := 72
+	%default_mapping_data[49] := 71
+	%default_mapping_data[50] := 73
+	%default_mapping_data[51] := 80
+	%default_mapping_data[52] := 79
+	%default_mapping_data[53] := 81
+	%default_mapping_data[54] := 76
+	%default_mapping_data[55] := 75
+	%default_mapping_data[56] := 77
+	%default_mapping_data[57] := 83
+	%default_mapping_data[58] := 84
+	%default_mapping_data[59] := 87
+	%default_mapping_data[60] := 2
+	%default_mapping_data[61] := 15
+	%default_mapping_data[62] := 12
+	%default_mapping_data[63] := 13
+	%default_mapping_data[64] := 14
+	%default_mapping_data[65] := 53
+	%default_mapping_data[66] := 19
+	%default_mapping_data[67] := 53
+	%default_mapping_data[68] := 25
+	%default_mapping_data[69] := 46
+	%default_mapping_data[70] := 29
+	%default_mapping_data[71] := 39
+	%default_mapping_data[72] := 54
+	%default_mapping_data[73] := 54
+	%default_mapping_data[74] := 47
+	%default_mapping_data[75] := 40
+	%default_mapping_data[76] := 31
+	%default_mapping_data[77] := 32
+	%default_mapping_data[78] := 33
+	%default_mapping_data[79] := 34
+	%default_mapping_data[80] := 35
+	%default_mapping_data[81] := 5
+	%default_mapping_data[83] := 6
+	%default_mapping_data[84] := 8
+	%default_mapping_data[85] := 20
+	%default_mapping_data[86] := 9
+	%default_mapping_data[87] := 21
+	%default_mapping_data[88] := 51
+	%default_mapping_data[89] := 52
+	%default_mapping_data[90] := 23
+	%default_mapping_data[91] := 51
+	%default_mapping_data[92] := 24
+	%default_mapping_data[93] := 52
+	%default_mapping_data[94] := 26
+	%default_mapping_data[95] := 44
+	%default_mapping_data[96] := 45
+	%default_mapping_data[97] := 27
+	%default_mapping_data[98] := 37
+	%default_mapping_data[100] := 38
+end on
+
+{loads a new MIDI-file to the MIDI-object and copies it to the 1st event array - this array always holds the original state of the file}
+function load_file
+	{variables passed:		@file_path
+							$quant_amount (percent)
+							
+	variables used:			$count_1
+							$count_2
+							$mf_num_events
+							$mf_length_1
+							%event_array_1[5 * 6500]
+	}
+	
+	{interrupt playback while loading}
+	$old_play := $play
+	$play := 0
+	$processing_flag := 1
+	note_off($ALL_EVENTS)
+	
+	while ($play_flag = 1)
+		wait(1000)
+	end while
+	
+	$load_mf_id := load_midi_file(@file_path)
+	
+	while ($load_mf_id # -1)
+		wait(1000)
+	end while
+
+	mf_get_first($track_idx)
+	$count_1 := 0
+	while (mf_get_command() # 0)
+		%event_array_1[$count_1 * 5] := mf_get_pos()
+		%event_array_1[$count_1 * 5 + 1] := mf_get_command()
+		%event_array_1[$count_1 * 5 + 2] := mf_get_byte_one()
+		%event_array_1[$count_1 * 5 + 3] := mf_get_byte_two()
+		%event_array_1[$count_1 * 5 + 4] := -1
+		inc($count_1)
+		mf_get_next($track_idx)
+	end while
+	
+	$mf_num_events := $count_1
+	mf_get_last($track_idx)
+	$mf_length_1 := (((mf_get_pos() - 1) / 960) + 1) * 960
+	
+	{connecting Note On & Note Off events // Remapping to the technical mapping}
+	$count_1 := 0
+	while ($count_1 < $mf_num_events)
+		if (%event_array_1[$count_1 * 5 + 1] = $MIDI_COMMAND_NOTE_ON and %event_array_1[$count_1 * 5 + 3] # 0)
+			$count_2 := $count_1 + 1
+			while ($count_2 < $mf_num_events)
+				if ((%event_array_1[$count_2 * 5 + 1] = $MIDI_COMMAND_NOTE_OFF or...
+					(%event_array_1[$count_2 * 5 + 1] = $MIDI_COMMAND_NOTE_ON and %event_array_1[$count_2 * 5 + 3] = 0)) and...
+					%event_array_1[$count_2 * 5 + 2] = %event_array_1[$count_1 * 5 + 2] and %event_array_1[$count_2 * 5 + 4] = -1)
+						%event_array_1[$count_1 * 5 + 4] := $count_2
+						%event_array_1[$count_1 * 5 + 2] := %default_mapping_data[%event_array_1[$count_1 * 5 + 2]]
+						%event_array_1[$count_2 * 5 + 4] := $count_1
+						%event_array_1[$count_2 * 5 + 2] := %default_mapping_data[%event_array_1[$count_2 * 5 + 2]]
+						if (%event_array_1[$count_1 * 5] = %event_array_1[$count_2 * 5])
+							inc(%event_array_1[$count_2 * 5])
+						end if
+						$count_2 := $mf_num_events
+				end if
+				wait(10)
+				inc($count_2)
+			end while
+		end if
+		wait(1)
+		inc($count_1)
+	end while
+	
+	{re-initiate playback if playback was on when the function was invoked}
+	$play := $old_play
+	$processing_flag := 0
+end function
+
+{initializes the 2nd array by copying the contents of the 1st one to it - the 1st array always holds the original contents of the MIDI file}
+function init_event_array
+	{variables passed:		%event_array_1[5 * 6500]
+							$mf_length_1
+							
+	variables used:			$count_1
+							$mf_length_2
+							%event_array_2[5 * 6500]
+	}
+	
+	$count_1 := 0
+	while ($count_1 < $mf_num_events * 5 + 4)
+		%event_array_2[$count_1] := %event_array_1[$count_1]
+		wait(1)
+		inc($count_1)
+	end while
+	$mf_length_2 := $mf_length_1
+end function	
+
+function quantize
+	{variables passed:		$quant_resol  (ticks)
+							$quant_amount (percent)
+							
+	variables used:			$count_1
+							$old_pos
+							$pos_offset
+							%event_array_2[5 * 6500]
+	}
+	
+	$count_1 := 0
+	
+	if ($quant_amount < 0 and $grid < 2)
+		$temp_quant_resol := 240
+	else
+		$temp_quant_resol := $quant_resol
+	end if
+	
+	while ($count_1 < $mf_num_events)
+		if (%event_array_2[$count_1 * 5 + 1] = $MIDI_COMMAND_NOTE_ON and %event_array_2[$count_1 * 5 + 3] # 0)
+			$old_pos := %event_array_2[$count_1 * 5]
+			if ($old_pos mod $temp_quant_resol <= $temp_quant_resol / 2)
+				$pos_offset := ($old_pos / $temp_quant_resol * $temp_quant_resol - $old_pos) * 1000 * $quant_amount / 100000
+			else
+				$pos_offset := ($old_pos / $temp_quant_resol * $temp_quant_resol + $temp_quant_resol - $old_pos) * 1000 * $quant_amount / 100000
+			end if
+			
+			if ($quant_amount < 0)
+				$pos_offset := $pos_offset + random($quant_amount / $grid, -$quant_amount / $grid)
+			end if
+			
+			if (%event_array_2[$count_1 * 5] + $pos_offset > $mf_length_2)
+				$pos_offset := $mf_length_2 - %event_array_2[$count_1 * 5]
+			else
+				if (%event_array_2[$count_1 * 5] + $pos_offset < 0)
+					$pos_offset := %event_array_2[$count_1 * 5]
+				end if
+			end if
+			
+			%event_array_2[$count_1 * 5] := %event_array_2[$count_1 * 5] + $pos_offset
+			
+			{move the note off event by the same offset}
+			if (%event_array_2[$count_1 * 5 + 4] # -1)
+				%event_array_2[%event_array_2[$count_1 * 5 + 4] * 5] := %event_array_2[%event_array_2[$count_1 * 5 + 4] * 5] + $pos_offset
+				if (%event_array_2[%event_array_2[$count_1 * 5 + 4] * 5] > $mf_length_2)
+					%event_array_2[%event_array_2[$count_1 * 5 + 4] * 5] := $mf_length_2
+				end if
+			end if
+		end if
+		wait(1)
+		inc($count_1)
+	end while
+end function
+
+function swing
+	{variables passed:		$swing_cycle  (ticks)
+							$swing_amount (percent)
+							
+	variables used:			$count_1
+							$old_pos
+							$pos_offset
+							%event_array_2[5 * 6500]
+	}
+	
+	$count_1 := 0
+	
+	while ($count_1 < $mf_num_events)
+		if (%event_array_2[$count_1 * 5 + 1] = $MIDI_COMMAND_NOTE_ON and %event_array_2[$count_1 * 5 + 3] # 0)
+			$old_pos := %event_array_2[$count_1 * 5]
+			if ($old_pos mod $swing_cycle <= $swing_cycle / 2)
+				$pos_offset := ($old_pos mod $swing_cycle) * ($swing_cycle / 2 + $swing_cycle * $swing_amount / 200) / ($swing_cycle / 2) - ($old_pos mod $swing_cycle)
+			else
+				$pos_offset := ((($old_pos mod $swing_cycle) - $swing_cycle / 2) * $swing_cycle + ($swing_cycle - $old_pos mod $swing_cycle) * ($swing_cycle / 2 + $swing_cycle * $swing_amount / 200)) / ($swing_cycle / 2) - ($old_pos mod $swing_cycle)
+			end if
+			%event_array_2[$count_1 * 5] := %event_array_2[$count_1 * 5] + $pos_offset
+			
+			{move the note off event by the same offset}
+			if (%event_array_2[$count_1 * 5 + 4] # -1)
+				%event_array_2[%event_array_2[$count_1 * 5 + 4] * 5] := %event_array_2[%event_array_2[$count_1 * 5 + 4] * 5] + $pos_offset
+				if (%event_array_2[%event_array_2[$count_1 * 5 + 4] * 5] > $mf_length_2)
+					%event_array_2[%event_array_2[$count_1 * 5 + 4] * 5] := $mf_length_2
+				end if
+			end if
+		end if
+		wait(1)
+		inc($count_1)
+	end while
+end function
+
+function length
+	{variables passed:		$stretch_amt	(1 for x2, 4 for 1/2)
+							
+	variables used:			$count_1
+							$mf_length_2
+							%event_array_2[5 * 6500]
+	}
+
+	$count_1 := 0
+	while ($count_1 < $mf_num_events)
+		%event_array_2[$count_1 * 5] := %event_array_2[$count_1 * 5] * $stretch_amt / 2
+		wait(1)
+		inc($count_1)
+	end while
+	
+	$mf_length_2 := $mf_length_2 * $stretch_amt / 2
+end function
+
+function velocity
+	{variables passed:		$higher, $lower
+							
+	variables used:			$count_1
+							$mf_length_2
+							%event_array_2[5 * 6500]
+	}
+
+	$count_1 := 0
+	while ($count_1 < $mf_num_events)
+		%event_array_2[$count_1 * 5 + 3] := ((%event_array_2[$count_1 * 5 + 3] - 1) * $higher + (127 -%event_array_2[$count_1 * 5 + 3]) * $lower) / 126
+		wait(1)
+		inc($count_1)
+	end while
+end function
+
+function mf_apply_changes
+	{variables passed:		%event_array_2[5 * 6500]
+							
+	variables used:			$count_1
+	}
+	
+	{interrupt playback while processing the MIDI-object}
+	$old_play := $play
+	$play := 0
+	$processing_flag := 1
+	note_off($ALL_EVENTS)
+	
+	while ($play_flag = 1)
+		wait(1000)
+	end while
+	
+	{move all events after the "end of the file".	
+	this is done to ensure no events will be processed twice: 
+	when, later, data will be copied from the event array to the MIDI-object, unprocessed events will be accessed using mf_get_last()}
+	mf_get_first($track_idx)
+	while (mf_get_pos() # $mf_length_2 + 1)
+		mf_set_pos($mf_length_2 + 1)
+		mf_get_first($track_idx)
+	end while
+	
+	{copy all event data from the event array to the MIDI-object // Remap to current mapping}
+	$count_1 := 0
+	mf_get_last($track_idx)
+	while ($count_1 < $mf_num_events)
+		
+		if (%event_array_2[$count_1 * 5] >= $mf_length_2)
+			mf_set_pos($mf_length_2 - 1)
+		else
+			mf_set_pos(%event_array_2[$count_1 * 5])
+		end if
+		
+		mf_set_command(%event_array_2[$count_1 * 5 + 1])
+		
+		if (%event_array_2[$count_1 * 5 + 1] = $MIDI_COMMAND_NOTE_ON or %event_array_2[$count_1 * 5 + 1] = $MIDI_COMMAND_NOTE_OFF)
+			mf_set_byte_one(%inverse_mapping_data[%event_array_2[$count_1 * 5 + 2]])
+		else
+			mf_set_byte_one(%event_array_2[$count_1 * 5 + 2])
+		end if
+		
+		mf_set_byte_two(%event_array_2[$count_1 * 5 + 3])		
+		
+		mf_get_last($track_idx)
+		
+		wait(1)
+		inc($count_1)
+	end while
+	
+	{re-initiate playback if playback was on when the function was invoked}
+	$play := $old_play
+	$processing_flag := 0
+end function
+
+on ui_control ($file_selector)
+	if ($first_time_ever_flag = 1)
+		$first_time_ever_flag := 0
+	end if
+	
+	{$first_time_ever_flag := 1
+	message($first_time_ever_flag)}
+
+	@file_path := fs_get_filename(%ui_id[0], 2)
+	@file_name := fs_get_filename(%ui_id[0], 0)
+
+	@snap_file_path := fs_get_filename(%ui_id[0], 2)
+	@snap_file_name := fs_get_filename(%ui_id[0], 0)
+
+	set_text($groove_display, @file_name)
+	
+	pgs_set_key_val(ACTION_TYPE, 0, -1)
+	pgs_set_key_val(GROOVE_DATA, 0, -1)
+	pgs_set_key_val(GROOVE_DATA, 1, 0)
+	pgs_set_key_val(GROOVE_DATA, 2, 0)
+	pgs_set_key_val(GROOVE_DATA, 3, 0)
+	pgs_set_str_key_val(GROOVE_NAME, @file_name)
+	pgs_set_key_val(ACTION_TYPE, 0, 2)
+	
+	call load_file
+	call init_event_array
+	
+	if ($quant_amount # 0)
+		call quantize
+	end if
+	
+	if ($swing_amount # 0)
+		call swing
+	end if
+	
+	if ($normal = 0)
+		call length
+	end if
+	
+	if ($velocity # 0)
+		call velocity
+	end if
+	
+	call mf_apply_changes
+end on
+
+on ui_control ($prev_groove)
+	if ($processing_flag # 1)
+		fs_navigate(%ui_id[0], 0)
+		$prev_groove := 0
+	end if
+end on
+
+on ui_control ($next_groove)
+	if ($processing_flag # 1)
+		fs_navigate(%ui_id[0], 1)
+		$next_groove := 0
+	end if
+end on
+
+on ui_control ($quantize)
+	$quant_amount := $quantize
+
+	$last_callback_id := $NI_CALLBACK_ID
+	wait($KNOB_ADJUSTMENT_TOLERANCE)
+	
+	if ($NI_CALLBACK_ID = $last_callback_id)		
+		call init_event_array
+		
+		if ($quant_amount # 0)
+			call quantize
+		end if
+		
+		if ($swing_amount # 0)
+			call swing
+		end if
+		
+		if ($normal = 0)
+			call length
+		end if
+		
+		if ($velocity # 0)
+			call velocity
+		end if
+		
+		call mf_apply_changes
+	end if
+end on
+
+on ui_control ($swing)
+	$swing_amount := $swing
+
+	$last_callback_id := $NI_CALLBACK_ID
+	wait($KNOB_ADJUSTMENT_TOLERANCE)
+	
+	if ($NI_CALLBACK_ID = $last_callback_id)		
+		call init_event_array
+		
+		if ($quant_amount # 0)
+			call quantize
+		end if
+		
+		if ($swing_amount # 0)
+			call swing
+		end if
+		
+		if ($normal = 0)
+			call length
+		end if
+		
+		if ($velocity # 0)
+			call velocity
+		end if
+		
+		call mf_apply_changes
+	end if
+end on
+
+on ui_control ($velocity)
+	if ($velocity < 0)
+		$lower := 1
+		$higher := 127 + $velocity
+	else
+		$lower := $velocity
+		$higher := 127
+	end if
+	
+	$last_callback_id := $NI_CALLBACK_ID
+	wait($KNOB_ADJUSTMENT_TOLERANCE)
+	
+	if ($NI_CALLBACK_ID = $last_callback_id)		
+		call init_event_array
+		
+		if ($quant_amount # 0)
+			call quantize
+		end if
+		
+		if ($swing_amount # 0)
+			call swing
+		end if
+		
+		if ($normal = 0)
+			call length
+		end if
+		
+		if ($velocity # 0)
+			call velocity
+		end if
+		
+		call mf_apply_changes
+	end if
+end on
+
+on ui_control ($grid)
+	$quant_resol := %quant_resol_transform[$grid]
+	$swing_cycle := %swing_cycle_transform[$grid]
+
+	$last_callback_id := $NI_CALLBACK_ID
+	wait($KNOB_ADJUSTMENT_TOLERANCE)
+	
+	if ($NI_CALLBACK_ID = $last_callback_id)		
+		call init_event_array
+		
+		if ($quant_amount # 0)
+			call quantize
+		end if
+		
+		if ($swing_amount # 0)
+			call swing
+		end if
+		
+		if ($normal = 0)
+			call length
+		end if
+		
+		if ($velocity # 0)
+			call velocity
+		end if
+		
+		call mf_apply_changes
+	end if
+end on
+
+on ui_control ($grid_up)
+	if ($grid = 5)
+		$grid := 0
+	else
+		inc($grid)
+	end if
+
+	$quant_resol := %quant_resol_transform[$grid]
+	$swing_cycle := %swing_cycle_transform[$grid]
+	
+	call init_event_array
+	
+	if ($quant_amount # 0)
+		call quantize
+	end if
+	
+	if ($swing_amount # 0)
+		call swing
+	end if
+	
+	if ($normal = 0)
+		call length
+	end if
+	
+	if ($velocity # 0)
+		call velocity
+	end if
+	
+	call mf_apply_changes
+end on
+
+on ui_control ($grid_dn)
+	if ($grid = 0)
+		$grid := 5
+	else
+		dec($grid)
+	end if
+
+	$quant_resol := %quant_resol_transform[$grid]
+	$swing_cycle := %swing_cycle_transform[$grid]
+	
+	call init_event_array
+	
+	if ($quant_amount # 0)
+		call quantize
+	end if
+	
+	if ($swing_amount # 0)
+		call swing
+	end if
+	
+	if ($normal = 0)
+		call length
+	end if
+	
+	if ($velocity # 0)
+		call velocity
+	end if
+	
+	call mf_apply_changes
+end on
+
+on ui_control ($half)
+	if ($half = 1)
+		$stretch_amt := 4
+		$normal := 0
+		$double := 0
+		
+		call init_event_array
+		
+		if ($quant_amount # 0)
+			call quantize
+		end if
+		
+		if ($swing_amount # 0)
+			call swing
+		end if
+		
+		if ($normal = 0)
+			call length
+		end if
+		
+		if ($velocity # 0)
+			call velocity
+		end if
+		
+		call mf_apply_changes
+	else
+		$half := 1
+	end if
+end on
+
+on ui_control ($normal)
+	if ($normal = 1)
+		$stretch_amt := 2
+		$half := 0
+		$double := 0
+		
+		call init_event_array		
+		
+		if ($quant_amount # 0)
+			call quantize
+		end if
+		
+		if ($swing_amount # 0)
+			call swing
+		end if
+		
+		if ($normal = 0)
+			call length
+		end if
+		
+		if ($velocity # 0)
+			call velocity
+		end if
+		
+		call mf_apply_changes
+	else
+		$normal := 1
+	end if
+end on
+
+on ui_control ($double)
+	if ($double = 1)
+		$stretch_amt := 1
+		$half := 0
+		$normal := 0
+		
+		call init_event_array
+		
+		if ($quant_amount # 0)
+			call quantize
+		end if
+		
+		if ($swing_amount # 0)
+			call swing
+		end if
+		
+		if ($normal = 0)
+			call length
+		end if
+		
+		if ($velocity # 0)
+			call velocity
+		end if
+		
+		call mf_apply_changes
+	else
+		$double := 1
+	end if
+end on
+
+on ui_control ($play)
+	{$prev_ext_song_pos := $NI_SONG_POSITION
+	wait(1000)}
+	$snap_play := $play
+
+	pgs_set_key_val(ACTION_TYPE, 0, -1)
+	pgs_set_key_val(GROOVE_DATA, 0, $play)
+	pgs_set_key_val(GROOVE_DATA, 1, 0)
+	pgs_set_key_val(GROOVE_DATA, 2, 0)
+	pgs_set_key_val(GROOVE_DATA, 3, 0)
+	pgs_set_key_val(ACTION_TYPE, 0, 2)
+
+	if ($play = 0)
+		$n_counter := 0
+		while ($n_counter < 127)
+			set_key_pressed($n_counter, 0)
+			note_off($ALL_EVENTS)
+			wait(1000)   
+			inc($n_counter)
+		end while
+	end if
+end on
+
+on listener
+	$cur_listener_id := $NI_CALLBACK_ID
+
+	if ($play = 1)
+		if ($play_flag = 1)
+			wait(1)
+		end if
+		
+		$play_flag := 1
+		{if the clock is not running, emulate it}
+		if ($NI_TRANSPORT_RUNNING = 0)
+			$cur_song_pos := $cur_song_pos + $LISTENER_BEAT_LENGTH_TICKS
+		else
+			$cur_song_pos := $NI_SONG_POSITION
+		end if
+		
+		$prev_ext_song_pos := $NI_SONG_POSITION
+		
+		$beat_start_time := $ENGINE_UPTIME
+		mf_get_next_at(0, $cur_song_pos mod $mf_length_2)
+		$start_of_beat := $cur_song_pos mod $mf_length_2
+		$end_of_beat := $cur_song_pos mod $mf_length_2 + $LISTENER_BEAT_LENGTH_TICKS
+		
+		while (mf_get_pos() < $end_of_beat and $play = 1 and $cur_listener_id = $NI_CALLBACK_ID)
+			$diff := ticks_to_ms(mf_get_pos() + $wrap_flag * $mf_length_2 - $start_of_beat) - ($ENGINE_UPTIME - $beat_start_time) * 1000
+			
+			if ($diff > 0)
+				wait($diff)
+			end if
+
+			$mf_note_length := ticks_to_ms(mf_get_note_length())
+			if ($mf_note_length < $MIN_NOTE_LENGTH)
+				$mf_note_length := $MIN_NOTE_LENGTH
+			end if
+			
+			if (mf_get_command() = $MIDI_COMMAND_NOTE_ON and mf_get_byte_two() # 0)
+				%event_ids_per_note[mf_get_byte_one() * 10 + %num_events_per_note[mf_get_byte_one()]] := play_note(mf_get_byte_one(),mf_get_byte_two(),0,$mf_note_length)
+				inc(%num_events_per_note[mf_get_byte_one()])
+			else
+				if (mf_get_command() = $MIDI_COMMAND_NOTE_OFF or (mf_get_command() = $MIDI_COMMAND_NOTE_ON and mf_get_byte_two() = 0))
+					dec(%num_events_per_note[mf_get_byte_one()])
+					note_off(%event_ids_per_note[mf_get_byte_one() * 10 + %num_events_per_note[mf_get_byte_one()]])
+				end if
+			end if
+			mf_get_next(0)
+			if (mf_get_command() = 0)
+				if ($end_of_beat > $mf_length_2)
+					mf_get_first(0)
+					$end_of_beat := $end_of_beat mod $mf_length_2
+					$start_of_beat := $end_of_beat - $LISTENER_BEAT_LENGTH_TICKS
+				else
+					exit
+				end if
+			end if
+		end while
+	end if
+	$play_flag := 0
+end on
+
+on async_complete
+	if ($load_mf_id = $NI_ASYNC_ID)
+		$load_mf_id := -1
+		
+		if ($init_flag = 1)
+			pgs_set_key_val(ACTION_TYPE, 0, -1)
+			pgs_set_key_val(GROOVE_DATA, 1, 0)
+			pgs_set_key_val(GROOVE_DATA, 2, 0)
+			pgs_set_key_val(GROOVE_DATA, 3, 1)
+			pgs_set_key_val(ACTION_TYPE, 0, 2)
+			$init_flag := 0
+		end if
+	end if
+	
+	if($NI_ASYNC_ID = $mixer_preset_load_id_1)
+		$mixer_preset_load_id_1 := -1
+	end if
+	if($NI_ASYNC_ID = $mixer_preset_load_id_2)
+		$mixer_preset_load_id_2 := -1
+	end if
+	if($NI_ASYNC_ID = $mixer_check)
+		if($NI_ASYNC_EXIT_STATUS # 1)
+			while($mixer_init_flag = 1)
+				wait(75)
+			end while
+			%kitc_mixer_userpresets[0] := 0
+			
+			set_menu_item_visibility(%mixer_ui_id[1], $FACTORY_PRESETS, 0)
+			set_menu_item_visibility(%mixer_ui_id[2], $FACTORY_PRESETS, 0)
+		
+			$count := $FACTORY_PRESETS + 1
+			while($count < $FACTORY_PRESETS + 1 + $USER_PRESETS)
+				set_menu_item_visibility(%mixer_ui_id[1], $count, 0)
+				set_menu_item_visibility(%mixer_ui_id[2], $count, 0)
+				inc($count)
+			end while
+		end if		
+	end if
+end on
+
+{Mixer Callbacks}
+on ui_control ($mixer_preset_next)
+	if($mixer_preset_menu = $FACTORY_PRESETS - 1 and %kitc_mixer_userpresets[0] = 0)
+		$mixer_preset_menu := 0
+	else
+		if($mixer_preset_menu = $FACTORY_PRESETS + %kitc_mixer_userpresets[0])
+			$mixer_preset_menu := 0
+		else
+			inc($mixer_preset_menu)
+			if($mixer_preset_menu = $FACTORY_PRESETS)
+				inc($mixer_preset_menu)
+			end if
+		end if
+	end if
+	$last_mixer_preset := $mixer_preset_menu
+	pgs_set_key_val(ACTION_TYPE,0, -1)
+	pgs_set_key_val(MIXER_DATA, 0, 1)
+	pgs_set_key_val(MIXER_DATA, 1, 0)
+	pgs_set_key_val(MIXER_DATA, 2, $mixer_preset_menu)
+	pgs_set_key_val(MIXER_DATA, 4, 0)
+	pgs_set_key_val(ACTION_TYPE,0, 1)
+end on
+
+on ui_control ($mixer_preset_prev)
+	if($mixer_preset_menu = 0)
+		if(%kitc_mixer_userpresets[0] = 0)
+			$mixer_preset_menu := $FACTORY_PRESETS - 1
+		else
+			$mixer_preset_menu := $FACTORY_PRESETS + %kitc_mixer_userpresets[0]
+		end if
+	else
+		dec($mixer_preset_menu)
+		if($mixer_preset_menu = $FACTORY_PRESETS)
+			dec($mixer_preset_menu)
+		end if
+	end if
+	$last_mixer_preset := $mixer_preset_menu
+	pgs_set_key_val(ACTION_TYPE,0, -1)
+	pgs_set_key_val(MIXER_DATA, 0, 1)
+	pgs_set_key_val(MIXER_DATA, 1, 0)
+	pgs_set_key_val(MIXER_DATA, 2, $mixer_preset_menu)
+	pgs_set_key_val(MIXER_DATA, 4, 0)
+	pgs_set_key_val(ACTION_TYPE,0, 1)
+end on
+
+on ui_control ($mixer_preset_menu)
+	if($mixer_preset_menu = $FACTORY_PRESETS)
+		$mixer_preset_menu := $last_mixer_preset
+	else
+		pgs_set_key_val(ACTION_TYPE, 0, -1)
+		pgs_set_key_val(MIXER_DATA, 0, 1)
+		pgs_set_key_val(MIXER_DATA, 1, 0)
+		pgs_set_key_val(MIXER_DATA, 2, $mixer_preset_menu)
+		pgs_set_key_val(MIXER_DATA, 4, 0)
+		pgs_set_key_val(ACTION_TYPE, 0, 1)
+	end if
+	$last_mixer_preset := $mixer_preset_menu
+end on
+
+on ui_control ($mixer_preset_menu_new)
+	if($mixer_preset_menu_new # $FACTORY_PRESETS)
+		pgs_set_key_val(ACTION_TYPE, 0, -1)
+		pgs_set_key_val(MIXER_DATA, 0, 1)
+		pgs_set_key_val(MIXER_DATA, 1, 0)
+		pgs_set_key_val(MIXER_DATA, 2, $mixer_preset_menu_new)
+		pgs_set_key_val(MIXER_DATA, 4, 0)
+		pgs_set_key_val(ACTION_TYPE, 0, 1)
+	end if
+	$mixer_preset_menu := $mixer_preset_menu_new
+	$last_mixer_preset := $mixer_preset_menu
+end on
+	
+{/Mixer Callbacks}
+
+on pgs_changed
+	select (pgs_get_key_val(ACTION_TYPE, 0))
+		case 1
+			if (pgs_get_key_val(MIXER_DATA, 1) # $mixer_preset_flag)
+				$mixer_preset_flag := pgs_get_key_val(MIXER_DATA, 1)
+				if($mixer_preset_flag = 1)
+					set_control_par(%mixer_ui_id[2],$CONTROL_PAR_HIDE,$HIDE_WHOLE_CONTROL)
+					set_control_par(%mixer_ui_id[1],$CONTROL_PAR_HIDE,$HIDE_PART_NOTHING)
+				else
+					set_control_par(%mixer_ui_id[1],$CONTROL_PAR_HIDE,$HIDE_WHOLE_CONTROL)
+					set_control_par(%mixer_ui_id[2],$CONTROL_PAR_HIDE,$HIDE_PART_NOTHING)
+				end if
+			end if
+			if(pgs_get_key_val(MIXER_DATA, 4) = 1)
+				$mixer_preset_load_id_1 := load_array(%kitc_mixer_userpresets,1)
+				$mixer_preset_load_id_2 := load_array(!kitc_mixerpreset_names,1)
+				
+				while ($mixer_preset_load_id_1 # -1 or $mixer_preset_load_id_2 # -1)
+					wait(10)
+				end while
+				
+				if(%kitc_mixer_userpresets[0] = 0)
+					set_menu_item_visibility(%mixer_ui_id[1], $FACTORY_PRESETS, 0)
+					set_menu_item_visibility(%mixer_ui_id[2], $FACTORY_PRESETS, 0)
+				else
+					set_menu_item_visibility(%mixer_ui_id[1], $FACTORY_PRESETS, 1)	
+					set_menu_item_visibility(%mixer_ui_id[2], $FACTORY_PRESETS, 1)	
+				end if
+				
+				$count := $FACTORY_PRESETS + 1
+				while($count < $FACTORY_PRESETS + 1 + $USER_PRESETS)
+					set_menu_item_str(%mixer_ui_id[1], $count, !kitc_mixerpreset_names[$count - $FACTORY_PRESETS - 1])
+					set_menu_item_str(%mixer_ui_id[2], $count, !kitc_mixerpreset_names[$count - $FACTORY_PRESETS - 1])
+					set_menu_item_visibility(%mixer_ui_id[1], $count, 1)
+					set_menu_item_visibility(%mixer_ui_id[2], $count, 1)
+					if($count > $FACTORY_PRESETS + %kitc_mixer_userpresets[0])
+						set_menu_item_visibility(%mixer_ui_id[1], $count, 0)
+						set_menu_item_visibility(%mixer_ui_id[2], $count, 0)
+					end if
+					inc($count)
+				end while
+			end if
+			if (pgs_get_key_val(MIXER_DATA, 2) # -1)
+				$mixer_preset_menu := pgs_get_key_val(MIXER_DATA, 2)
+				$mixer_preset_menu_new := pgs_get_key_val(MIXER_DATA, 2)
+				$last_mixer_preset := $mixer_preset_menu
+			end if
+		case 2
+			if (pgs_get_key_val(GROOVE_DATA, 1) = 1)
+				if ($processing_flag # 1)
+					fs_navigate(%ui_id[0], 0)
+					set_text($play, "")
+				end if
+			end if
+			if (pgs_get_key_val(GROOVE_DATA, 2) = 1)
+				if ($processing_flag # 1)
+					fs_navigate(%ui_id[0], 1)
+					set_text($play, "")
+				end if
+			end if
+			if (pgs_get_key_val(GROOVE_DATA, 3) = 1)
+				set_text($groove_display, @file_name)
+			
+				pgs_set_key_val(ACTION_TYPE, 0, -1)
+				pgs_set_key_val(GROOVE_DATA, 1, 0)
+				pgs_set_key_val(GROOVE_DATA, 2, 0)
+				pgs_set_key_val(GROOVE_DATA, 3, 0)
+				pgs_set_str_key_val(GROOVE_NAME, @file_name)
+				pgs_set_key_val(ACTION_TYPE, 0, 2)
+				
+				{call load_file}
+					$old_play := $play
+					$play := 0
+					$processing_flag := 1
+					note_off($ALL_EVENTS)
+					
+					mf_get_first($track_idx)
+					$count_1 := 0
+					while (mf_get_command() # 0)
+						%event_array_1[$count_1 * 5] := mf_get_pos()
+						%event_array_1[$count_1 * 5 + 1] := mf_get_command()
+						%event_array_1[$count_1 * 5 + 2] := mf_get_byte_one()
+						%event_array_1[$count_1 * 5 + 3] := mf_get_byte_two()
+						%event_array_1[$count_1 * 5 + 4] := -1
+						inc($count_1)
+						mf_get_next($track_idx)
+					end while
+					
+					$mf_num_events := $count_1
+					mf_get_last($track_idx)
+					$mf_length_1 := (((mf_get_pos() - 1) / 960) + 1) * 960
+					
+					{connecting Note On & Note Off events // Remapping to the technical mapping}
+					$count_1 := 0
+					while ($count_1 < $mf_num_events)
+						if (%event_array_1[$count_1 * 5 + 1] = $MIDI_COMMAND_NOTE_ON and %event_array_1[$count_1 * 5 + 3] # 0)
+							$count_2 := $count_1 + 1
+							while ($count_2 < $mf_num_events)
+								if ((%event_array_1[$count_2 * 5 + 1] = $MIDI_COMMAND_NOTE_OFF or...
+									(%event_array_1[$count_2 * 5 + 1] = $MIDI_COMMAND_NOTE_ON and %event_array_1[$count_2 * 5 + 3] = 0)) and...
+									%event_array_1[$count_2 * 5 + 2] = %event_array_1[$count_1 * 5 + 2] and %event_array_1[$count_2 * 5 + 4] = -1)
+										%event_array_1[$count_1 * 5 + 4] := $count_2
+										%event_array_1[$count_1 * 5 + 2] := %default_mapping_data[%event_array_1[$count_1 * 5 + 2]]
+										%event_array_1[$count_2 * 5 + 4] := $count_1
+										%event_array_1[$count_2 * 5 + 2] := %default_mapping_data[%event_array_1[$count_2 * 5 + 2]]
+										if (%event_array_1[$count_1 * 5] = %event_array_1[$count_2 * 5])
+											inc(%event_array_1[$count_2 * 5])
+										end if
+										$count_2 := $mf_num_events
+								end if
+								inc($count_2)
+							end while
+						end if
+						inc($count_1)
+					end while
+					
+					{re-initiate playback if playback was on when the function was invoked}
+					{$play := $old_play}
+					$play := $snap_play
+					$processing_flag := 0
+				{/call load_file}
+				
+				{call init_event_array}
+					$count_1 := 0
+					while ($count_1 < $mf_num_events * 5 + 4)	
+						%event_array_2[$count_1] := %event_array_1[$count_1]
+						inc($count_1)
+					end while
+
+					$mf_length_2 := $mf_length_1
+				{/call init_event_array}
+				
+				if ($quant_amount # 0)
+					{call quantize}
+						$count_1 := 0
+	
+						if ($quant_amount < 0 and $grid < 2)
+							$temp_quant_resol := 240
+						else
+							$temp_quant_resol := $quant_resol
+						end if
+						
+						while ($count_1 < $mf_num_events)
+							if (%event_array_2[$count_1 * 5 + 1] = $MIDI_COMMAND_NOTE_ON and %event_array_2[$count_1 * 5 + 3] # 0)
+								$old_pos := %event_array_2[$count_1 * 5]
+								if ($old_pos mod $temp_quant_resol <= $temp_quant_resol / 2)
+									$pos_offset := ($old_pos / $temp_quant_resol * $temp_quant_resol - $old_pos) * 1000 * $quant_amount / 100000
+								else
+									$pos_offset := ($old_pos / $temp_quant_resol * $temp_quant_resol + $temp_quant_resol - $old_pos) * 1000 * $quant_amount / 100000
+								end if
+								
+								if ($quant_amount < 0)
+									$pos_offset := $pos_offset + random($quant_amount / $grid, -$quant_amount / $grid)
+								end if
+								
+								if (%event_array_2[$count_1 * 5] + $pos_offset > $mf_length_2)
+									$pos_offset := $mf_length_2 - %event_array_2[$count_1 * 5]
+								else
+									if (%event_array_2[$count_1 * 5] + $pos_offset < 0)
+										$pos_offset := %event_array_2[$count_1 * 5]
+									end if
+								end if
+								
+								%event_array_2[$count_1 * 5] := %event_array_2[$count_1 * 5] + $pos_offset
+								
+								{move the note off event by the same offset}
+								if (%event_array_2[$count_1 * 5 + 4] # -1)
+									%event_array_2[%event_array_2[$count_1 * 5 + 4] * 5] := %event_array_2[%event_array_2[$count_1 * 5 + 4] * 5] + $pos_offset
+									if (%event_array_2[%event_array_2[$count_1 * 5 + 4] * 5] > $mf_length_2)
+										%event_array_2[%event_array_2[$count_1 * 5 + 4] * 5] := $mf_length_2
+									end if
+								end if
+							end if
+							inc($count_1)
+						end while
+					{/call quantize}
+				end if
+				
+				if ($swing_amount # 0)
+					{call swing}
+						$count_1 := 0
+						
+						while ($count_1 < $mf_num_events)
+							if (%event_array_2[$count_1 * 5 + 1] = $MIDI_COMMAND_NOTE_ON and %event_array_2[$count_1 * 5 + 3] # 0)
+								$old_pos := %event_array_2[$count_1 * 5]
+								if ($old_pos mod $swing_cycle <= $swing_cycle / 2)
+									$pos_offset := ($old_pos mod $swing_cycle) * ($swing_cycle / 2 + $swing_cycle * $swing_amount / 200) / ($swing_cycle / 2) - ($old_pos mod $swing_cycle)
+								else
+									$pos_offset := ((($old_pos mod $swing_cycle) - $swing_cycle / 2) * $swing_cycle + ($swing_cycle - $old_pos mod $swing_cycle) * ($swing_cycle / 2 + $swing_cycle * $swing_amount / 200)) / ($swing_cycle / 2) - ($old_pos mod $swing_cycle)
+								end if
+								%event_array_2[$count_1 * 5] := %event_array_2[$count_1 * 5] + $pos_offset
+								
+								{move the note off event by the same offset}
+								if (%event_array_2[$count_1 * 5 + 4] # -1)
+									%event_array_2[%event_array_2[$count_1 * 5 + 4] * 5] := %event_array_2[%event_array_2[$count_1 * 5 + 4] * 5] + $pos_offset
+									if (%event_array_2[%event_array_2[$count_1 * 5 + 4] * 5] > $mf_length_2)
+										%event_array_2[%event_array_2[$count_1 * 5 + 4] * 5] := $mf_length_2
+									end if
+								end if
+							end if
+							inc($count_1)
+						end while
+					{/call swing}
+				end if
+				
+				if ($normal = 0)
+					{call length}
+						$count_1 := 0
+						while ($count_1 < $mf_num_events)
+							%event_array_2[$count_1 * 5] := %event_array_2[$count_1 * 5] * $stretch_amt / 2
+							inc($count_1)
+						end while
+						
+						$mf_length_2 := $mf_length_2 * $stretch_amt / 2
+					{/call length}
+				end if
+				
+				if ($velocity # 0)
+					{call velocity}
+						$count_1 := 0
+						while ($count_1 < $mf_num_events)
+							%event_array_2[$count_1 * 5 + 3] := ((%event_array_2[$count_1 * 5 + 3] - 1) * $higher + (127 -%event_array_2[$count_1 * 5 + 3]) * $lower) / 126
+							inc($count_1)
+						end while
+					{/call velocity}
+				end if
+				
+				{call mf_apply_changes}
+					{interrupt playback while processing the MIDI-object}
+					$old_play := $play
+					$play := 0
+					$processing_flag := 1
+					note_off($ALL_EVENTS)
+					
+					{move all events after the "end of the file".	
+					this is done to ensure no events will be processed twice: 
+					when, later, data will be copied from the event array to the MIDI-object, unprocessed events will be accessed using mf_get_last()}
+					mf_get_first($track_idx)
+					while (mf_get_pos() # $mf_length_2 + 1)
+						mf_set_pos($mf_length_2 + 1)
+						mf_get_first($track_idx)
+					end while
+					
+					{copy all event data from the event array to the MIDI-object // Remap to current mapping}
+					$count_1 := 0
+					mf_get_last($track_idx)
+					while ($count_1 < $mf_num_events)
+						if (%event_array_2[$count_1 * 5] >= $mf_length_2)
+							mf_set_pos($mf_length_2 - 1)
+						else
+							mf_set_pos(%event_array_2[$count_1 * 5])
+						end if
+						mf_set_command(%event_array_2[$count_1 * 5 + 1])
+						if (%event_array_2[$count_1 * 5 + 1] = $MIDI_COMMAND_NOTE_ON or %event_array_2[$count_1 * 5 + 1] = $MIDI_COMMAND_NOTE_OFF)
+							mf_set_byte_one(%inverse_mapping_data[%event_array_2[$count_1 * 5 + 2]])
+						else
+							mf_set_byte_one(%event_array_2[$count_1 * 5 + 2])
+						end if
+						mf_set_byte_two(%event_array_2[$count_1 * 5 + 3])		
+						mf_get_last($track_idx)
+						inc($count_1)
+					end while
+					
+					{re-initiate playback if playback was on when the function was invoked}
+					$play := $old_play
+					$processing_flag := 0
+				{/call mf_apply_changes}
+				set_text($play, "")
+				$init_flag := 0			
+			end if
+			if (pgs_get_key_val(GROOVE_DATA, 0) # -1)
+				$play := pgs_get_key_val(GROOVE_DATA, 0)
+				$snap_play := $play
+				if ($play = 0)
+					note_off($ALL_EVENTS)
+				else
+					if ($prev_ext_song_pos = $NI_SONG_POSITION)
+						$cur_song_pos := - $LISTENER_BEAT_LENGTH_TICKS
+					else
+						$cur_song_pos := $NI_SONG_POSITION
+					end if
+				end if
+			end if
+		case 6
+			$count_1 := 0
+			while ($count_1 < 128)
+				%inverse_mapping_data[$count_1] := pgs_get_key_val(MAPPING_DATA, $count_1)
+				inc($count_1)
+			end while
+			
+			call init_event_array
+	
+			if ($quant_amount # 0)
+				call quantize
+			end if
+			
+			if ($swing_amount # 0)
+				call swing
+			end if
+			
+			if ($normal = 0)
+				call length
+			end if
+			
+			if ($velocity # 0)
+				call velocity
+			end if
+			
+			call mf_apply_changes
+	end select
+end on
+
+on persistence_changed
+
+		@snap_file_name := @file_name
+		@snap_file_path := @file_path
+
+		set_text($groove_display, @file_name)
+		
+		call load_file
+		call init_event_array
+		
+		pgs_set_key_val(ACTION_TYPE, 0, -1)
+		pgs_set_key_val(GROOVE_DATA, 0, -1)
+		pgs_set_key_val(GROOVE_DATA, 1, 0)
+		pgs_set_key_val(GROOVE_DATA, 2, 0)
+		pgs_set_key_val(GROOVE_DATA, 3, 0)
+		pgs_set_str_key_val(GROOVE_NAME, @file_name)
+		pgs_set_key_val(ACTION_TYPE, 0, 2)
+
+		$swing_amount := $swing
+		$quant_amount := $quantize
+
+		if ($quant_amount # 0)
+			call quantize
+		end if
+		
+		if ($swing_amount # 0)
+			call swing
+		end if
+		
+		if ($normal = 0)
+			call length
+		end if
+
+		if ($velocity < 0)
+			$lower := 1
+			$higher := 127 + $velocity
+		else
+			$lower := $velocity
+			$higher := 127
+		end if
+		
+		if ($velocity # 0)
+			call velocity
+		end if
+		
+		{call mf_apply_changes}
+		{$old_play := $play
+		$play := 0}
+		$processing_flag := 1
+		note_off($ALL_EVENTS)
+		
+		while ($play_flag = 1)
+			wait(1000)
+		end while
+		
+		{move all events after the "end of the file".	
+		this is done to ensure no events will be processed twice: 
+		when, later, data will be copied from the event array to the MIDI-object, unprocessed events will be accessed using mf_get_last()}
+		mf_get_first($track_idx)
+		while (mf_get_pos() # $mf_length_2 + 1)
+			mf_set_pos($mf_length_2 + 1)
+			mf_get_first($track_idx)
+		end while
+		
+		{copy all event data from the event array to the MIDI-object // Remap to current mapping}
+		$count_1 := 0
+		mf_get_last($track_idx)
+		while ($count_1 < $mf_num_events)
+			if (%event_array_2[$count_1 * 5] >= $mf_length_2)
+				mf_set_pos($mf_length_2 - 1)
+			else
+				mf_set_pos(%event_array_2[$count_1 * 5])
+			end if
+			mf_set_command(%event_array_2[$count_1 * 5 + 1])
+			if (%event_array_2[$count_1 * 5 + 1] = $MIDI_COMMAND_NOTE_ON or %event_array_2[$count_1 * 5 + 1] = $MIDI_COMMAND_NOTE_OFF)
+				mf_set_byte_one(%inverse_mapping_data[%event_array_2[$count_1 * 5 + 2]])
+			else
+				mf_set_byte_one(%event_array_2[$count_1 * 5 + 2])
+			end if
+			mf_set_byte_two(%event_array_2[$count_1 * 5 + 3])		
+			mf_get_last($track_idx)
+			wait(1)
+			inc($count_1)
+		end while
+		
+		{re-initiate playback if playback was on when the function was invoked}
+		$play := $snap_play
+		$processing_flag := 0
+	{end if}
+	$init_LOADED := 0
+end on

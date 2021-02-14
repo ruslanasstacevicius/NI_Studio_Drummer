@@ -1,0 +1,3997 @@
+{***********************************************
+Native Instruments Drums - Kit C
+Options Page 1.4
+Author: Native Instruments
+Written by: Dinos Vallianatos
+Modified by: Thanos Kazakos
+Modified: July 16th, 2014
+*************************************************}
+
+on init
+	message("")
+
+	declare $init_LOADED := 1
+	
+	make_perfview
+	set_ui_height_px(510)
+	set_skin_offset(603)
+	set_script_title("Options")
+
+	declare polyphonic $played_key
+	set_key_pressed_support(1)
+	
+	declare const $KNOB_ADJUSTMENT_TOLERANCE := 150000
+	declare $last_callback_id
+	
+	declare const $AT_THRESHOLD := 127
+	
+	declare const $FONT_1_ID := 12
+	declare const $FONT_2_ID := 13
+	
+	declare @ART_MENU_ALIGNMENT_HELPER
+	@ART_MENU_ALIGNMENT_HELPER := "          "
+	
+	{helpers}
+	declare $count_1
+	declare $count_2
+	declare $n_counter
+	declare $new_vel
+	declare $temp_1
+	declare $text_change_flag
+	{/helpers}
+	
+	{async command IDs}
+	declare $load_user_mapping_data_id := -1
+	declare $save_user_mapping_data_id := -1
+	declare $load_user_mapping_names_id := -1
+	declare $save_user_mapping_names_id := -1
+	declare $load_num_user_presets_id := -1
+	declare $save_num_user_presets_id := -1
+	{/async command IDs}
+	
+	{shared across Options, Kit & Voice Control scripts}
+	declare const $NUM_INSTRUMENTS := 20
+	declare const $MAX_NUM_TOTAL_ART := 126
+	
+	declare const $KICK_ID := 0
+	declare const $SNARE_ID := 1
+	declare const $HH_ID := 2
+	declare const $TOM1_ID := 3
+	declare const $TOM2_ID := 4
+	declare const $TOM3_ID := 5
+	declare const $TOM4_ID := 6
+	declare const $TOM5_ID := 7
+	declare const $CYMB1_ID := 8
+	declare const $CYMB2_ID := 9
+	declare const $CYMB3_ID := 10
+	declare const $CYMB4_ID := 11
+	declare const $CYMB5_ID := 12
+	declare const $CYMB6_ID := 13
+	declare const $CYMB7_ID := 14
+	declare const $PERC1_ID := 15
+	declare const $PERC2_ID := 16
+	declare const $PERC3_ID := 17
+	declare const $PERC4_ID := 18
+	declare const $PERC5_ID := 19
+	declare const $END_ID := 20
+	
+	declare !INSTRUMENT_NAMES[20]
+	!INSTRUMENT_NAMES[$KICK_ID] := "KICK"
+	!INSTRUMENT_NAMES[$SNARE_ID] := "SNARE"
+	!INSTRUMENT_NAMES[$HH_ID] := "HIHAT"
+	!INSTRUMENT_NAMES[$TOM1_ID] := "TOM 1"
+	!INSTRUMENT_NAMES[$TOM2_ID] := "TOM 2"
+	!INSTRUMENT_NAMES[$TOM3_ID] := "TOM 3"
+	!INSTRUMENT_NAMES[$TOM4_ID] := "TOM 4"
+	!INSTRUMENT_NAMES[$TOM5_ID] := "TOM 5"
+	!INSTRUMENT_NAMES[$CYMB1_ID] := "CRASH 1" 	
+	!INSTRUMENT_NAMES[$CYMB2_ID] := "CRASH 2" 	
+	!INSTRUMENT_NAMES[$CYMB3_ID] := "RIDE" 		
+	!INSTRUMENT_NAMES[$CYMB4_ID] := "CHINA" 	
+	!INSTRUMENT_NAMES[$CYMB5_ID] := "SPLASH" 	
+	!INSTRUMENT_NAMES[$CYMB6_ID] := "CYMBAL 6"	
+	!INSTRUMENT_NAMES[$CYMB7_ID] := "CYMBAL 7"	
+	!INSTRUMENT_NAMES[$PERC1_ID] := "STICKS"	
+	!INSTRUMENT_NAMES[$PERC2_ID] := "CLAPS"		
+	!INSTRUMENT_NAMES[$PERC3_ID] := "TAMBOURINE"
+	!INSTRUMENT_NAMES[$PERC4_ID] := "COWBELL"	
+	!INSTRUMENT_NAMES[$PERC5_ID] := "PERC 5"
+
+	declare !inst_visual_names[20]
+	!inst_visual_names[$KICK_ID]	:= "Kick"
+	!inst_visual_names[$SNARE_ID]	:= "Snare"
+	!inst_visual_names[$HH_ID]		:= "Hihat"
+	!inst_visual_names[$TOM1_ID]	:= "Tom 1"
+	!inst_visual_names[$TOM2_ID]	:= "Tom 2"
+	!inst_visual_names[$TOM3_ID]	:= "Tom 3"
+	!inst_visual_names[$TOM4_ID]	:= "Tom 4"
+	!inst_visual_names[$TOM5_ID]	:= "Tom 5"
+	!inst_visual_names[$CYMB1_ID]	:= "Crash 1" 	
+	!inst_visual_names[$CYMB2_ID]	:= "Crash 2" 	
+	!inst_visual_names[$CYMB3_ID]	:= "Ride" 		
+	!inst_visual_names[$CYMB4_ID]	:= "China" 	
+	!inst_visual_names[$CYMB5_ID]	:= "Splash" 	
+	!inst_visual_names[$CYMB6_ID]	:= "Cymbal 6"	
+	!inst_visual_names[$CYMB7_ID]	:= "Cymbal 7"	
+	!inst_visual_names[$PERC1_ID]	:= "Sticks"	
+	!inst_visual_names[$PERC2_ID]	:= "Claps"		
+	!inst_visual_names[$PERC3_ID]	:= "Tambourine"
+	!inst_visual_names[$PERC4_ID]	:= "Cowbell"	
+	!inst_visual_names[$PERC5_ID]	:= "Perc 5"	
+	
+	{constants that are to be set per kit}
+	declare %KEY_USED[128] := (1)			{which notes are used for this kit: 0 -> note is not used
+																				1 -> note is used}
+	%KEY_USED[1] := 0
+	%KEY_USED[3] := 0
+	%KEY_USED[16] := 0
+	%KEY_USED[17] := 0
+	%KEY_USED[18] := 0
+	%KEY_USED[41] := 0
+	%KEY_USED[42] := 0
+	%KEY_USED[48] := 0
+	%KEY_USED[49] := 0
+	%KEY_USED[55] := 0
+	%KEY_USED[56] := 0
+	%KEY_USED[57] := 0
+	%KEY_USED[58] := 0
+	%KEY_USED[59] := 0
+	%KEY_USED[60] := 0
+	%KEY_USED[61] := 0
+	%KEY_USED[62] := 0
+	%KEY_USED[63] := 0
+	%KEY_USED[64] := 0
+	%KEY_USED[65] := 0
+	%KEY_USED[66] := 0
+	%KEY_USED[67] := 0
+	%KEY_USED[68] := 0
+	%KEY_USED[69] := 0
+	%KEY_USED[70] := 0
+	%KEY_USED[85] := 0
+	%KEY_USED[88] := 0
+	%KEY_USED[89] := 0
+	%KEY_USED[91] := 0
+	%KEY_USED[92] := 0
+	%KEY_USED[93] := 0
+	%KEY_USED[94] := 0
+	%KEY_USED[95] := 0
+	%KEY_USED[96] := 0
+	%KEY_USED[97] := 0
+	%KEY_USED[98] := 0
+	%KEY_USED[104] := 0
+	%KEY_USED[105] := 0
+	%KEY_USED[106] := 0
+	%KEY_USED[107] := 0
+	%KEY_USED[110] := 0
+	%KEY_USED[113] := 0
+	%KEY_USED[114] := 0
+	%KEY_USED[115] := 0
+	%KEY_USED[116] := 0
+	%KEY_USED[117] := 0
+	%KEY_USED[118] := 0
+	%KEY_USED[119] := 0
+	%KEY_USED[120] := 0
+	%KEY_USED[121] := 0
+	%KEY_USED[122] := 0
+	%KEY_USED[123] := 0
+	%KEY_USED[124] := 0
+	%KEY_USED[125] := 0
+	%KEY_USED[126] := 0
+	%KEY_USED[127] := 0
+	
+											{max value}
+	declare const $NUM_KIT_MICS := 3			{4}
+	declare const $NUM_SNARE_INSTRUMENTS := 2	{3}
+
+	declare %NUM_DIR_MICS[$NUM_INSTRUMENTS]
+	%NUM_DIR_MICS[$KICK_ID] := 3				{3}
+	%NUM_DIR_MICS[$SNARE_ID] := 2				{2}
+	%NUM_DIR_MICS[$HH_ID] := 1					{1}
+	%NUM_DIR_MICS[$TOM1_ID] := 1				{1}
+	%NUM_DIR_MICS[$TOM2_ID] := 1				{1}
+	%NUM_DIR_MICS[$TOM3_ID] := 1				{1}
+	%NUM_DIR_MICS[$TOM4_ID] := -1				{1}
+	%NUM_DIR_MICS[$TOM5_ID] := -1				{1}
+	%NUM_DIR_MICS[$CYMB1_ID] := 0				{0}
+	%NUM_DIR_MICS[$CYMB2_ID] := 0				{0}
+	%NUM_DIR_MICS[$CYMB3_ID] := 0				{0}
+	%NUM_DIR_MICS[$CYMB4_ID] := 0				{0}
+	%NUM_DIR_MICS[$CYMB5_ID] := 0				{0}
+	%NUM_DIR_MICS[$CYMB6_ID] := -1				{0}
+	%NUM_DIR_MICS[$CYMB7_ID] := -1				{0}
+	%NUM_DIR_MICS[$PERC1_ID] := 0				{1}
+	%NUM_DIR_MICS[$PERC2_ID] := 0				{1}
+	%NUM_DIR_MICS[$PERC3_ID] := 1				{1}
+	%NUM_DIR_MICS[$PERC4_ID] := 1				{1}
+	%NUM_DIR_MICS[$PERC5_ID] := -1				{1}
+	
+	declare %NUM_ART[$NUM_INSTRUMENTS]
+	%NUM_ART[$KICK_ID] := 2						{4}
+	%NUM_ART[$SNARE_ID] := 12					{15}
+	%NUM_ART[$HH_ID] := 17						{17}
+	%NUM_ART[$TOM1_ID] := 5						{6}
+	%NUM_ART[$TOM2_ID] := 5						{6}
+	%NUM_ART[$TOM3_ID] := 5						{6}
+	%NUM_ART[$TOM4_ID] := 0						{6}
+	%NUM_ART[$TOM5_ID] := 0						{6}
+	%NUM_ART[$CYMB1_ID] := 4					{4}
+	%NUM_ART[$CYMB2_ID] := 4					{4}
+	%NUM_ART[$CYMB3_ID] := 4					{4}
+	%NUM_ART[$CYMB4_ID] := 3					{4}
+	%NUM_ART[$CYMB5_ID] := 2					{4}
+	%NUM_ART[$CYMB6_ID] := 0					{4}
+	%NUM_ART[$CYMB7_ID] := 0					{4}
+	%NUM_ART[$PERC1_ID] := 1					{3}
+	%NUM_ART[$PERC2_ID] := 2					{3}
+	%NUM_ART[$PERC3_ID] := 2					{3}
+	%NUM_ART[$PERC4_ID] := 4					{3}
+	%NUM_ART[$PERC5_ID] := 0					{3}
+	{/constants that are to be set per kit}
+	
+	{the MIDI note the first articulation each one of the instruments is mapped to - according to the technical mapping}
+	declare %INSTRUMENT_OFFSET[$NUM_INSTRUMENTS + 1] := (-1)
+	%INSTRUMENT_OFFSET[$KICK_ID] := 0
+	%INSTRUMENT_OFFSET[$SNARE_ID] := 4
+	%INSTRUMENT_OFFSET[$HH_ID] := 19
+	%INSTRUMENT_OFFSET[$TOM1_ID] := 36
+	%INSTRUMENT_OFFSET[$TOM2_ID] := 43
+	%INSTRUMENT_OFFSET[$TOM3_ID] := 50
+	%INSTRUMENT_OFFSET[$TOM4_ID] := 57
+	%INSTRUMENT_OFFSET[$TOM5_ID] := 64
+	%INSTRUMENT_OFFSET[$CYMB1_ID] := 71
+	%INSTRUMENT_OFFSET[$CYMB2_ID] := 75
+	%INSTRUMENT_OFFSET[$CYMB3_ID] := 79
+	%INSTRUMENT_OFFSET[$CYMB4_ID] := 83
+	%INSTRUMENT_OFFSET[$CYMB5_ID] := 87
+	%INSTRUMENT_OFFSET[$CYMB6_ID] := 91
+	%INSTRUMENT_OFFSET[$CYMB7_ID] := 95
+	%INSTRUMENT_OFFSET[$PERC1_ID] := 99
+	
+	{constants that are to be set per kit}
+	%INSTRUMENT_OFFSET[$PERC2_ID] := 100
+	%INSTRUMENT_OFFSET[$PERC3_ID] := 102
+	%INSTRUMENT_OFFSET[$PERC4_ID] := 108
+	%INSTRUMENT_OFFSET[$PERC5_ID] := 113
+	%INSTRUMENT_OFFSET[$END_ID] := 113
+	{/constants that are to be set per kit}
+	
+	{Group Lists per Articulation
+	-----------------------------
+	The number of the row is the note number the articulation is assigned to (refer to the technical mapping document).
+	
+	meaning of columns:
+	#1: Group index of the 1st Direct mic of the articulation
+	#2: Group index of the 2nd Direct mic of the articulation
+	#3: Group index of the 3rd Direct mic of the articulation
+	#4: Group index of the Snare Bleed of the articulation
+	#5: Group index of the 1st Kit mic of the articulation
+	#6: Group index of the 2nd Kit mic of the articulation
+	#7: Group index of the 3rd Kit mic of the articulation
+	#8: Group index of the 4th Kit mic of the articulation	
+	
+	Note: 	If a certain mic type is not available (eg, Snare Bleed for the snare hits), 
+			-1 is going	to be used in the respective column.}
+
+	declare %GROUP_DATA[$MAX_NUM_TOTAL_ART * 8] := (...
+		{KICK}		{0}		0,  9, 12, 13, 17, 33, 49, -1,...
+					{1}	   -1, -1, -1, -1, -1, -1, -1, -1,...
+					{2}	    0,  9, 12, 13, 17, 33, 49, -1,...
+					{3}	   -1, -1, -1, -1, -1, -1, -1, -1,...
+		{SNARE 1}	{4}		1, 10, -1, -1, 18, 34, 50, -1,...
+					{5}		1, 10, -1, -1, 18, 34, 50, -1,...
+					{6}		1, 10, -1, -1, 18, 34, 50, -1,...
+					{7}		1, 10, -1, -1, 18, 34, 50, -1,...
+					{8}		1, 10, -1, -1, 18, 34, 50, -1,...
+					{9}		1, 10, -1, -1, 18, 34, 50, -1,...
+					{10}	1, 10, -1, -1, 18, 34, 50, -1,...
+					{11}	1, 10, -1, -1, 18, 34, 50, -1,...
+					{12}	1, 10, -1, -1, 18, 34, 50, -1,...
+					{13}	1, 10, -1, -1, 18, 34, 50, -1,...
+					{14}	1, 10, -1, -1, 18, 34, 50, -1,...
+					{15}	1, 10, -1, -1, 18, 34, 50, -1,...
+					{16}   -1, -1, -1, -1, -1, -1, -1, -1,...
+					{17}   -1, -1, -1, -1, -1, -1, -1, -1,...
+					{18}   -1, -1, -1, -1, -1, -1, -1, -1,...
+		{HI-HAT}	{19}	3, -1, -1, -1, 20, 36, 52, -1,...
+					{20}	3, -1, -1, -1, 20, 36, 52, -1,...
+					{21}	3, -1, -1, -1, 20, 36, 52, -1,...
+					{22}	3, -1, -1, -1, 20, 36, 52, -1,...
+					{23}	3, -1, -1, -1, 20, 36, 52, -1,...
+					{24}	3, -1, -1, -1, 20, 36, 52, -1,...
+					{25}	3, -1, -1, -1, 20, 36, 52, -1,...
+					{26}	3, -1, -1, -1, 20, 36, 52, -1,...
+					{17}	3, -1, -1, -1, 20, 36, 52, -1,...
+					{28}	3, -1, -1, -1, 20, 36, 52, -1,...
+					{29}	3, -1, -1, -1, 20, 36, 52, -1,...
+					{30}	3, -1, -1, -1, 20, 36, 52, -1,...
+					{31}	3, -1, -1, -1, 20, 36, 52, -1,...
+					{32}	3, -1, -1, -1, 20, 36, 52, -1,...
+					{33}	3, -1, -1, -1, 20, 36, 52, -1,...
+					{34}	3, -1, -1, -1, 20, 36, 52, -1,...
+					{35}	3, -1, -1, -1, 20, 36, 52, -1,...
+		{TOM 1}		{36}	4, -1, -1, 14, 21, 37, 53, -1,...
+					{37}	4, -1, -1, 14, 21, 37, 53, -1,...
+					{38}	4, -1, -1, 14, 21, 37, 53, -1,...
+					{39}	4, -1, -1, 14, 21, 37, 53, -1,...
+					{40}	4, -1, -1, 14, 21, 37, 53, -1,...
+					{41}   -1, -1, -1, -1, -1, -1, -1, -1,...
+					{42}   -1, -1, -1, -1, -1, -1, -1, -1,...
+		{TOM 2}		{43}	5, -1, -1, 15, 22, 38, 54, -1,...
+					{44}	5, -1, -1, 15, 22, 38, 54, -1,...
+					{45}	5, -1, -1, 15, 22, 38, 54, -1,...
+					{46}	5, -1, -1, 15, 22, 38, 54, -1,...
+					{47}	5, -1, -1, 15, 22, 38, 54, -1,...
+					{48}   -1, -1, -1, -1, -1, -1, -1, -1,...
+					{49}   -1, -1, -1, -1, -1, -1, -1, -1,...
+		{TOM 3}		{50}	6, -1, -1, 16, 23, 39, 55, -1,...
+					{51}	6, -1, -1, 16, 23, 39, 55, -1,...
+					{52}	6, -1, -1, 16, 23, 39, 55, -1,...
+					{53}	6, -1, -1, 16, 23, 39, 55, -1,...
+					{54}	6, -1, -1, 16, 23, 39, 55, -1,...
+					{55}   -1, -1, -1, -1, -1, -1, -1, -1,...
+					{56}   -1, -1, -1, -1, -1, -1, -1, -1,...
+		{TOM 4}		{57}   -1, -1, -1, -1, -1, -1, -1, -1,...
+					{58}   -1, -1, -1, -1, -1, -1, -1, -1,...
+					{59}   -1, -1, -1, -1, -1, -1, -1, -1,...
+					{60}   -1, -1, -1, -1, -1, -1, -1, -1,...
+					{61}   -1, -1, -1, -1, -1, -1, -1, -1,...
+					{62}   -1, -1, -1, -1, -1, -1, -1, -1,...
+					{63}   -1, -1, -1, -1, -1, -1, -1, -1,...
+		{TOM 5}		{64}   -1, -1, -1, -1, -1, -1, -1, -1,...
+					{65}   -1, -1, -1, -1, -1, -1, -1, -1,...
+					{66}   -1, -1, -1, -1, -1, -1, -1, -1,...
+					{67}   -1, -1, -1, -1, -1, -1, -1, -1,...
+					{68}   -1, -1, -1, -1, -1, -1, -1, -1,...
+					{69}   -1, -1, -1, -1, -1, -1, -1, -1,...
+					{70}   -1, -1, -1, -1, -1, -1, -1, -1,...
+		{CYMBAL 1}	{71}   -1, -1, -1, -1, 24, 40, 56, -1,...
+					{72}   -1, -1, -1, -1, 24, 40, 56, -1,...
+					{73}   -1, -1, -1, -1, 24, 40, 56, -1,...
+					{74}   -1, -1, -1, -1, 24, 40, 56, -1,...
+		{CYMBAL 2}	{75}   -1, -1, -1, -1, 25, 41, 57, -1,...
+					{76}   -1, -1, -1, -1, 25, 41, 57, -1,...
+					{77}   -1, -1, -1, -1, 25, 41, 57, -1,...
+					{78}   -1, -1, -1, -1, 25, 41, 57, -1,...
+		{CYMBAL 3}	{79}   -1, -1, -1, -1, 26, 42, 58, -1,...
+					{80}   -1, -1, -1, -1, 26, 42, 58, -1,...
+					{81}   -1, -1, -1, -1, 26, 42, 58, -1,...
+					{82}   -1, -1, -1, -1, 26, 42, 58, -1,...
+		{CYMBAL 4}	{83}   -1, -1, -1, -1, 27, 43, 59, -1,...
+					{84}   -1, -1, -1, -1, 27, 43, 59, -1,...
+					{85}   -1, -1, -1, -1, -1, -1, -1, -1,...
+					{86}   -1, -1, -1, -1, 27, 43, 59, -1,...
+		{CYMBAL 5}	{87}   -1, -1, -1, -1, 28, 44, 60, -1,...
+					{88}   -1, -1, -1, -1, -1, -1, -1, -1,...
+					{89}   -1, -1, -1, -1, -1, -1, -1, -1,...
+					{90}   -1, -1, -1, -1, 28, 44, 60, -1,...
+		{CYMBAL 6}	{91}   -1, -1, -1, -1, -1, -1, -1, -1,...
+					{92}   -1, -1, -1, -1, -1, -1, -1, -1,...
+					{93}   -1, -1, -1, -1, -1, -1, -1, -1,...
+					{94}   -1, -1, -1, -1, -1, -1, -1, -1,...
+		{CYMBAL 7}	{95}   -1, -1, -1, -1, -1, -1, -1, -1,...
+					{96}   -1, -1, -1, -1, -1, -1, -1, -1,...
+					{97}   -1, -1, -1, -1, -1, -1, -1, -1,...
+					{98}   -1, -1, -1, -1, -1, -1, -1, -1,...
+		{PERC 1}	{99}   -1, -1, -1, -1, 29, 45, 61, -1,...
+		{PERC 2}	{100}  -1, -1, -1, -1, 30, 46, 62, -1,...
+					{101}  -1, -1, -1, -1, 30, 46, 62, -1,...
+		{PERC 3}	{102}   7, -1, -1, -1, 31, 47, 63, -1,...
+					{103}   7, -1, -1, -1, 31, 47, 63, -1,...
+					{104}  -1, -1, -1, -1, -1, -1, -1, -1,...
+					{105}  -1, -1, -1, -1, -1, -1, -1, -1,...
+					{106}  -1, -1, -1, -1, -1, -1, -1, -1,...
+					{107}  -1, -1, -1, -1, -1, -1, -1, -1,...
+		{PERC 4}	{108}   8, -1, -1, -1, 32, 48, 64, -1,...
+					{109}   8, -1, -1, -1, 32, 48, 64, -1,...
+					{110}  -1, -1, -1, -1, -1, -1, -1, -1,...
+					{111}   8, -1, -1, -1, 32, 48, 64, -1,...
+					{112}   8, -1, -1, -1, 32, 48, 64, -1,...
+		{PERC 5}	{113}  -1, -1, -1, -1, -1, -1, -1, -1,...
+					{114}  -1, -1, -1, -1, -1, -1, -1, -1,...
+					{115}  -1, -1, -1, -1, -1, -1, -1, -1,...
+					{116}  -1, -1, -1, -1, -1, -1, -1, -1,...
+					{117}  -1, -1, -1, -1, -1, -1, -1, -1,...
+					{118}  -1, -1, -1, -1, -1, -1, -1, -1,...
+					{119}  -1, -1, -1, -1, -1, -1, -1, -1,...
+					{120}  -1, -1, -1, -1, -1, -1, -1, -1,...
+					{121}  -1, -1, -1, -1, -1, -1, -1, -1,...
+					{122}  -1, -1, -1, -1, -1, -1, -1, -1,...
+					{123}  -1, -1, -1, -1, -1, -1, -1, -1,...
+					{124}  -1, -1, -1, -1, -1, -1, -1, -1,...
+					{125}  -1, -1, -1, -1, -1, -1, -1, -1)
+	
+	{CHOKE KEYS - if these notes are played, all events of their associated group will be faded}
+	declare const $CYMB1_CHOKE := 74
+	declare const $CYMB2_CHOKE := 78
+	declare const $CYMB3_CHOKE := 82
+	declare const $CYMB4_CHOKE := 86
+	declare const $CYMB5_CHOKE := 90
+	declare const $CYMB6_CHOKE := 94
+	declare const $CYMB7_CHOKE := 98
+	
+	{Instruments per note}
+	declare %note_instruments[128] := (-1) {which key belongs to which instrument}
+	$count_1 := 0
+	$count_2 := 0
+	while ($count_1 < %INSTRUMENT_OFFSET[$END_ID])
+		if ($count_1 >= %INSTRUMENT_OFFSET[$count_2 + 1])
+			inc($count_2)
+		end if
+		%note_instruments[$count_1] := $count_2
+		inc($count_1)
+	end while
+	{/shared across Options, Kit & Voice Control scripts}
+	
+	declare !INSTRUMENT_PICS[20]
+	!INSTRUMENT_PICS[$KICK_ID] := "NID_kit_dropdown_instrument_kick"
+	!INSTRUMENT_PICS[$SNARE_ID] := "NID_kit_dropdown_instrument_snare"
+	!INSTRUMENT_PICS[$HH_ID] := "NID_kit_dropdown_instrument_hihat"
+	!INSTRUMENT_PICS[$TOM1_ID] := "NID_kit_dropdown_instrument_tom"
+	!INSTRUMENT_PICS[$TOM2_ID] := "NID_kit_dropdown_instrument_tom"
+	!INSTRUMENT_PICS[$TOM3_ID] := "NID_kit_dropdown_instrument_tom"
+	!INSTRUMENT_PICS[$TOM4_ID] := "NID_kit_dropdown_instrument_tom"
+	!INSTRUMENT_PICS[$TOM5_ID] := "NID_kit_dropdown_instrument_tom"
+	!INSTRUMENT_PICS[$CYMB1_ID] := "NID_kit_dropdown_instrument_crash" 	{*}
+	!INSTRUMENT_PICS[$CYMB2_ID] := "NID_kit_dropdown_instrument_crash" 	{*}
+	!INSTRUMENT_PICS[$CYMB3_ID] := "NID_kit_dropdown_instrument_ride" 		{*}
+	!INSTRUMENT_PICS[$CYMB4_ID] := "NID_kit_dropdown_instrument_china" 	{*}
+	!INSTRUMENT_PICS[$CYMB5_ID] := "NID_kit_dropdown_instrument_splash" 	{*}
+	!INSTRUMENT_PICS[$CYMB6_ID] := "CYMBAL 6"	{*}
+	!INSTRUMENT_PICS[$CYMB7_ID] := "CYMBAL 7"	{*}
+	!INSTRUMENT_PICS[$PERC1_ID] := "NID_kit_dropdown_instrument_sticks"	{*}
+	!INSTRUMENT_PICS[$PERC2_ID] := "NID_kit_dropdown_instrument_clap"		{*}
+	!INSTRUMENT_PICS[$PERC3_ID] := "NID_kit_dropdown_instrument_tambourine"{*}
+	!INSTRUMENT_PICS[$PERC4_ID] := "NID_kit_dropdown_instrument_cowbell"	{*}
+	!INSTRUMENT_PICS[$PERC5_ID] := "PERC 5"	{*}
+	
+	{Control Group "Mixer"}
+		declare $count
+		declare $mixer_preset_flag
+		make_persistent($mixer_preset_flag)
+		read_persistent_var($mixer_preset_flag)
+		declare $mixer_init_flag := 1
+		
+		{declarations}
+		declare ui_menu $mixer_preset_menu_new
+		declare ui_menu $mixer_preset_menu
+		declare ui_button $mixer_preset_prev
+		declare ui_button $mixer_preset_next
+		{/declarations}
+		
+		{mixer_ui_ids}
+		declare %mixer_ui_id[5]
+		{cell 0 is empty for kludge reasons}
+		%mixer_ui_id[1] := get_ui_id($mixer_preset_menu_new)
+		%mixer_ui_id[2] := get_ui_id($mixer_preset_menu)
+		%mixer_ui_id[3] := get_ui_id($mixer_preset_prev)
+		%mixer_ui_id[4] := get_ui_id($mixer_preset_next)
+		{/mixer_ui_ids}
+		
+		{Pictures}
+		set_control_par_str(%mixer_ui_id[1],$CONTROL_PAR_PICTURE,"NID_header_dropdown_newpreset")
+		set_control_par_str(%mixer_ui_id[2],$CONTROL_PAR_PICTURE,"NID_header_dropdown_preset")
+		set_control_par_str(%mixer_ui_id[3],$CONTROL_PAR_PICTURE,"NID_header_btn_prev")
+		set_control_par_str(%mixer_ui_id[4],$CONTROL_PAR_PICTURE,"NID_header_btn_next")
+		{/Pictures}
+		
+		{help}
+		set_control_par_str(%mixer_ui_id[1],$CONTROL_PAR_HELP,"Mixer Preset Menu: Selects and loads settings for the whole mixer.")
+		set_control_par_str(%mixer_ui_id[2],$CONTROL_PAR_HELP,"Mixer Preset Menu: Selects and loads settings for the whole mixer.")
+		set_control_par_str(%mixer_ui_id[3],$CONTROL_PAR_HELP,"Previous Mixer Preset: Selects and loads settings for the whole mixer from the preset that is located before this one in the mixer preset menu.")
+		set_control_par_str(%mixer_ui_id[4],$CONTROL_PAR_HELP,"Next Mixer Preset: Selects and loads settings for the whole mixer from the preset that is located after this one in the mixer preset menu.")
+		{/help}
+		
+		{Font IDs & Text Position}
+		set_control_par(%mixer_ui_id[1], $CONTROL_PAR_FONT_TYPE,14)
+		set_control_par(%mixer_ui_id[1], $CONTROL_PAR_TEXTPOS_Y,30)
+		set_control_par(%mixer_ui_id[2], $CONTROL_PAR_FONT_TYPE,14)
+		set_control_par(%mixer_ui_id[2], $CONTROL_PAR_TEXTPOS_Y,4)
+		{/Font IDs & Text Position}
+
+		{Position}
+		move_control_px($mixer_preset_menu_new,10,28)
+		move_control_px($mixer_preset_menu,10,28)
+		move_control_px($mixer_preset_prev,139,13)
+		move_control_px($mixer_preset_next,155,13)
+		{/Position}
+		
+		{Size}
+		
+		set_control_par(%mixer_ui_id[1],$CONTROL_PAR_WIDTH,162)
+		set_control_par(%mixer_ui_id[1],$CONTROL_PAR_HEIGHT,21)
+		
+		set_control_par(%mixer_ui_id[2],$CONTROL_PAR_WIDTH,162)
+		set_control_par(%mixer_ui_id[2],$CONTROL_PAR_HEIGHT,21)
+		
+		set_control_par(%mixer_ui_id[3],$CONTROL_PAR_WIDTH,21)
+		set_control_par(%mixer_ui_id[3],$CONTROL_PAR_HEIGHT,21)
+		
+		set_control_par(%mixer_ui_id[4],$CONTROL_PAR_WIDTH,21)
+		set_control_par(%mixer_ui_id[4],$CONTROL_PAR_HEIGHT,21)
+		{/Size}
+		
+		{Text}
+		set_control_par_str(%mixer_ui_id[3],$CONTROL_PAR_TEXT,"")
+		set_control_par_str(%mixer_ui_id[4],$CONTROL_PAR_TEXT,"")
+		{/Text}
+	
+		{Populate Menu & Information}
+		
+		declare const $FACTORY_PRESETS := 12
+		declare const $USER_PRESETS := 30
+		
+		declare !fact_mixerpreset_names[$FACTORY_PRESETS]
+		!fact_mixerpreset_names[0] := "Pop"
+		!fact_mixerpreset_names[1] := "Funk"
+		!fact_mixerpreset_names[2] := "Jazz"
+		!fact_mixerpreset_names[3] := "Hard Rock"
+		!fact_mixerpreset_names[4] := "Metal"
+		!fact_mixerpreset_names[5] := "Blues & Country"
+		!fact_mixerpreset_names[6] := "Blues Rock"
+		!fact_mixerpreset_names[7] := "Ballad"
+		!fact_mixerpreset_names[8] := "Indie Rock"
+		!fact_mixerpreset_names[9] := "Indie Disco"
+		!fact_mixerpreset_names[10] := "Punk Rock"
+		!fact_mixerpreset_names[11] := "INIT"
+		
+		declare $mixer_check
+		
+		declare %kitc_mixer_userpresets[1]
+		read_persistent_var(%kitc_mixer_userpresets)
+		$mixer_check := load_array(%kitc_mixer_userpresets,1)
+		
+		declare !kitc_mixerpreset_names[$USER_PRESETS]		
+		load_array(!kitc_mixerpreset_names,1)
+	
+		$count := 0
+		while($count < $FACTORY_PRESETS)
+			add_menu_item($mixer_preset_menu_new,!fact_mixerpreset_names[$count],$count)
+			add_menu_item($mixer_preset_menu,!fact_mixerpreset_names[$count],$count)
+			inc($count)
+		end while
+		
+		add_menu_item($mixer_preset_menu_new,"---------",$FACTORY_PRESETS)
+		add_menu_item($mixer_preset_menu,"---------",$FACTORY_PRESETS)
+		if(%kitc_mixer_userpresets[0] = 0)
+			set_menu_item_visibility(%mixer_ui_id[1], $FACTORY_PRESETS, 0)
+			set_menu_item_visibility(%mixer_ui_id[2], $FACTORY_PRESETS, 0)
+		else
+			set_menu_item_visibility(%mixer_ui_id[1], $FACTORY_PRESETS, 1)	
+			set_menu_item_visibility(%mixer_ui_id[2], $FACTORY_PRESETS, 1)	
+		end if
+		
+		$count := $FACTORY_PRESETS + 1
+		while($count < $FACTORY_PRESETS + 1 + $USER_PRESETS)
+			add_menu_item($mixer_preset_menu,!kitc_mixerpreset_names[$count - $FACTORY_PRESETS - 1],$count)
+			add_menu_item($mixer_preset_menu_new,!kitc_mixerpreset_names[$count - $FACTORY_PRESETS - 1],$count)
+			if($count > $FACTORY_PRESETS + %kitc_mixer_userpresets[0])
+				set_menu_item_visibility(%mixer_ui_id[1], $count, 0)
+				set_menu_item_visibility(%mixer_ui_id[2], $count, 0)
+			end if
+			inc($count)
+		end while
+		
+		make_persistent($mixer_preset_menu)
+		read_persistent_var($mixer_preset_menu)
+		
+		declare $last_mixer_preset
+		$last_mixer_preset := $mixer_preset_menu
+		$mixer_preset_menu_new := $mixer_preset_menu
+		
+		if($mixer_preset_flag = 1)
+			set_control_par(%mixer_ui_id[2],$CONTROL_PAR_HIDE,$HIDE_WHOLE_CONTROL)
+		else
+			set_control_par(%mixer_ui_id[1],$CONTROL_PAR_HIDE,$HIDE_WHOLE_CONTROL)
+		end if
+		
+		declare $mixer_preset_load_id_1
+		declare $mixer_preset_load_id_2
+		
+		$mixer_init_flag := 0
+	
+		{/Populate Menu & Information}
+	{/Control Group "Mixer"}
+	
+	{Control Group "Groove"}
+		{declarations}
+		declare ui_button $play
+		declare ui_label $groove_display (1, 1)
+		declare ui_button $prev_groove
+		declare ui_button $next_groove
+		{/declarations}
+		
+		{ui_ids}
+		declare %ui_id[5]
+		%ui_id[1] := get_ui_id($play)
+		%ui_id[2] := get_ui_id($groove_display)
+		%ui_id[3] := get_ui_id($prev_groove)
+		%ui_id[4] := get_ui_id($next_groove)
+		{/ui_ids}
+		
+		{Pictures}
+		set_control_par_str(%ui_id[1],$CONTROL_PAR_PICTURE,"NID_header_btn_play")
+		set_control_par_str(%ui_id[2],$CONTROL_PAR_PICTURE,"NID_header_button_drag")
+		set_control_par_str(%ui_id[3],$CONTROL_PAR_PICTURE,"NID_header_btn_prev")
+		set_control_par_str(%ui_id[4],$CONTROL_PAR_PICTURE,"NID_header_btn_next")
+		{/Pictures}
+		
+		{Font IDs & Text Position}
+		set_control_par(%ui_id[2], $CONTROL_PAR_FONT_TYPE, $FONT_2_ID)
+		set_control_par(%ui_id[2], $CONTROL_PAR_TEXTPOS_Y,3)
+		{/Font IDs & Text Position}
+		
+		{BG}
+		{set_control_par(%ui_id[2], $CONTROL_PAR_HIDE, $HIDE_PART_BG)}
+		{/BG}
+		
+		{Position}
+		set_control_par(%ui_id[1],$CONTROL_PAR_POS_X,458)
+		set_control_par(%ui_id[1],$CONTROL_PAR_POS_Y,11)
+		
+		set_control_par(%ui_id[2],$CONTROL_PAR_POS_X,484)
+		set_control_par(%ui_id[2],$CONTROL_PAR_POS_Y,32)
+		
+		set_control_par(%ui_id[3],$CONTROL_PAR_POS_X,589)
+		set_control_par(%ui_id[3],$CONTROL_PAR_POS_Y,13)
+		
+		set_control_par(%ui_id[4],$CONTROL_PAR_POS_X,605)
+		set_control_par(%ui_id[4],$CONTROL_PAR_POS_Y,13)
+		{/Position}
+		
+		{Size}		
+		set_control_par(%ui_id[1],$CONTROL_PAR_WIDTH,28)
+		set_control_par(%ui_id[1],$CONTROL_PAR_HEIGHT,42)
+		
+		set_control_par(%ui_id[2],$CONTROL_PAR_WIDTH,135)
+		set_control_par(%ui_id[2],$CONTROL_PAR_HEIGHT,16)
+		
+		set_control_par(%ui_id[3],$CONTROL_PAR_WIDTH,19)
+		set_control_par(%ui_id[3],$CONTROL_PAR_HEIGHT,18)
+		
+		set_control_par(%ui_id[4],$CONTROL_PAR_WIDTH,19)
+		set_control_par(%ui_id[4],$CONTROL_PAR_HEIGHT,18)
+		{/Size}
+		
+		{Text}
+		set_control_par_str(%ui_id[1],$CONTROL_PAR_TEXT,"")
+		set_control_par_str(%ui_id[3],$CONTROL_PAR_TEXT,"")
+		set_control_par_str(%ui_id[4],$CONTROL_PAR_TEXT,"")
+		{/Text}
+		
+		{Help Text}
+		set_control_par_str(%ui_id[1],$CONTROL_PAR_HELP,"Play: Use this control to start or stop playback. Playback is always following host song position if available.")
+		set_control_par_str(%ui_id[2],$CONTROL_PAR_HELP,"Active Groove: This is the area where the active groove or fill is displayed at any time. This is also the area from which you can drag the groove to your host project.")
+		set_control_par_str(%ui_id[3],$CONTROL_PAR_HELP,"Previous Groove: Use this control to skip to the previous variation of the active groove or fill.")
+		set_control_par_str(%ui_id[4],$CONTROL_PAR_HELP,"Next Groove: Use this control to skip to the next variation of the active groove or fill.")
+		{/Help Text}
+		
+		{Other}
+		set_control_par(%ui_id[2],$CONTROL_PAR_DND_BEHAVIOUR,1) 
+		{/Other}
+	{/Control Group "Groove"}
+	
+	{Control Group "Velocity"}
+		{Declarations}
+		declare ui_slider $min_velocity (1,127)
+		declare ui_slider $max_velocity (1,127)
+		declare ui_button $linear_velocity
+		declare ui_button $exp_1_velocity
+		declare ui_button $exp_2_velocity
+		declare ui_button $fix_velocity
+		declare ui_button $min_vel_up
+		declare ui_button $max_vel_up
+		declare ui_button $min_vel_dn
+		declare ui_button $max_vel_dn
+		{/Declarations}
+		
+		{ui_ids}
+		declare %velocity_id[10]
+		%velocity_id[0] := get_ui_id($min_velocity)
+		%velocity_id[1] := get_ui_id($max_velocity)
+		%velocity_id[2] := get_ui_id($linear_velocity)
+		%velocity_id[3] := get_ui_id($exp_1_velocity)
+		%velocity_id[4] := get_ui_id($exp_2_velocity)
+		%velocity_id[5] := get_ui_id($fix_velocity)
+		%velocity_id[6] := get_ui_id($min_vel_up)
+		%velocity_id[7] := get_ui_id($max_vel_up)
+		%velocity_id[8] := get_ui_id($min_vel_dn)
+		%velocity_id[9] := get_ui_id($max_vel_dn)
+		{/ui_ids}
+		
+		{Position}
+		set_control_par(%velocity_id[0],$CONTROL_PAR_POS_X,406)
+		set_control_par(%velocity_id[0],$CONTROL_PAR_POS_Y,139)
+		set_control_par(%velocity_id[1],$CONTROL_PAR_POS_X,466)
+		set_control_par(%velocity_id[1],$CONTROL_PAR_POS_Y,139)
+		
+		set_control_par(%velocity_id[2],$CONTROL_PAR_POS_X,112)
+		set_control_par(%velocity_id[2],$CONTROL_PAR_POS_Y,127)
+		set_control_par(%velocity_id[3],$CONTROL_PAR_POS_X,171)
+		set_control_par(%velocity_id[3],$CONTROL_PAR_POS_Y,127)
+		set_control_par(%velocity_id[4],$CONTROL_PAR_POS_X,229)
+		set_control_par(%velocity_id[4],$CONTROL_PAR_POS_Y,127)
+		set_control_par(%velocity_id[5],$CONTROL_PAR_POS_X,287)
+		set_control_par(%velocity_id[5],$CONTROL_PAR_POS_Y,127)
+
+		set_control_par(%velocity_id[6],$CONTROL_PAR_POS_X,405)
+		set_control_par(%velocity_id[6],$CONTROL_PAR_POS_Y,128)
+		set_control_par(%velocity_id[7],$CONTROL_PAR_POS_X,465)
+		set_control_par(%velocity_id[7],$CONTROL_PAR_POS_Y,128)
+		set_control_par(%velocity_id[8],$CONTROL_PAR_POS_X,405)
+		set_control_par(%velocity_id[8],$CONTROL_PAR_POS_Y,151)
+		set_control_par(%velocity_id[9],$CONTROL_PAR_POS_X,465)
+		set_control_par(%velocity_id[9],$CONTROL_PAR_POS_Y,151)
+		{/Position}
+		
+		{Size}
+		set_control_par(%velocity_id[2],$CONTROL_PAR_WIDTH,62)
+		set_control_par(%velocity_id[2],$CONTROL_PAR_HEIGHT,38)
+		set_control_par(%velocity_id[3],$CONTROL_PAR_WIDTH,62)
+		set_control_par(%velocity_id[3],$CONTROL_PAR_HEIGHT,38)
+		set_control_par(%velocity_id[4],$CONTROL_PAR_WIDTH,62)
+		set_control_par(%velocity_id[4],$CONTROL_PAR_HEIGHT,38)
+		set_control_par(%velocity_id[5],$CONTROL_PAR_WIDTH,62)
+		set_control_par(%velocity_id[5],$CONTROL_PAR_HEIGHT,38)
+
+		set_control_par(%velocity_id[6],$CONTROL_PAR_WIDTH,50)
+		set_control_par(%velocity_id[6],$CONTROL_PAR_HEIGHT,13)
+		set_control_par(%velocity_id[7],$CONTROL_PAR_WIDTH,50)
+		set_control_par(%velocity_id[7],$CONTROL_PAR_HEIGHT,13)
+		set_control_par(%velocity_id[8],$CONTROL_PAR_WIDTH,50)
+		set_control_par(%velocity_id[8],$CONTROL_PAR_HEIGHT,13)
+		set_control_par(%velocity_id[9],$CONTROL_PAR_WIDTH,50)
+		set_control_par(%velocity_id[9],$CONTROL_PAR_HEIGHT,13)
+		{/Size}
+
+		{Pictures}
+		set_control_par_str(%velocity_id[0], $CONTROL_PAR_PICTURE, "NID_options_slider_1-127")
+		set_control_par_str(%velocity_id[1], $CONTROL_PAR_PICTURE, "NID_options_slider_1-127")
+		
+		set_control_par_str(%velocity_id[2], $CONTROL_PAR_PICTURE, "NID_options_btn_curve_1")
+		set_control_par_str(%velocity_id[3], $CONTROL_PAR_PICTURE, "NID_options_btn_curve_2")
+		set_control_par_str(%velocity_id[4], $CONTROL_PAR_PICTURE, "NID_options_btn_curve_3")
+		set_control_par_str(%velocity_id[5], $CONTROL_PAR_PICTURE, "NID_options_btn_curve_4")
+		
+		set_control_par_str(%velocity_id[6], $CONTROL_PAR_PICTURE, "NID_options_btn_range_up")
+		set_control_par_str(%velocity_id[7], $CONTROL_PAR_PICTURE, "NID_options_btn_range_up")
+		set_control_par_str(%velocity_id[8], $CONTROL_PAR_PICTURE, "NID_options_btn_range_down")
+		set_control_par_str(%velocity_id[9], $CONTROL_PAR_PICTURE, "NID_options_btn_range_down")
+		{/Pictures}
+		
+		{Mouse Behaviour}
+		set_control_par(%velocity_id[0], $CONTROL_PAR_MOUSE_BEHAVIOUR, -500)
+		set_control_par(%velocity_id[1], $CONTROL_PAR_MOUSE_BEHAVIOUR, -500)
+		{/Mouse Behaviour}
+		
+		{Text}
+		$count_1 := 2
+		while ($count_1 < 10)
+			set_control_par_str(%velocity_id[$count_1], $CONTROL_PAR_TEXT, "")
+			inc($count_1)
+		end while
+		{/Text}
+		
+		{Persistency}
+		make_persistent ($min_velocity)
+		make_persistent ($max_velocity)
+		make_persistent ($linear_velocity)
+		make_persistent ($exp_1_velocity)
+		make_persistent ($exp_2_velocity)
+		make_persistent ($fix_velocity)
+		{/Persistency}
+
+		{Help Text}
+		set_control_help($min_velocity,"Min: Sets the minimum velocity value. Played velocities below this limit will be set to that value.")
+		set_control_help($min_vel_up,"Min: Sets the minimum velocity value. Played velocities below this limit will be set to that value.")
+		set_control_help($min_vel_dn,"Min: Sets the minimum velocity value. Played velocities below this limit will be set to that value.")
+		set_control_help($max_velocity,"Max: Sets the maximum velocity value. Played velocities above this limit will be set to that value. When the <Fixed Velocity Curve> is selected, this value determines the played velocity.")
+		set_control_help($max_vel_up,"Max: Sets the maximum velocity value. Played velocities above this limit will be set to that value. When the <Fixed Velocity Curve> is selected, this value determines the played velocity.")
+		set_control_help($max_vel_dn,"Max: Sets the maximum velocity value. Played velocities above this limit will be set to that value. When the <Fixed Velocity Curve> is selected, this value determines the played velocity.")
+		set_control_help ($linear_velocity,"Velocity Curve: Sets the velocity behaviour to a linear response.")
+		set_control_help ($exp_1_velocity,"Exponential Velocity Curve +: Sets the velocity behaviour to a positive exponential response.")
+		set_control_help ($exp_2_velocity,"Exponential Velocity Curve -: Sets the velocity behaviour to a negative exponential response.")
+		set_control_help ($fix_velocity,"Fixed Velocity: Sets all played velocities to the value specified with the <Max> control.")
+		{/Help Text}
+		
+		{Automation}
+		set_control_par(%velocity_id[0], $CONTROL_PAR_ALLOW_AUTOMATION, 0)
+		set_control_par(%velocity_id[1], $CONTROL_PAR_ALLOW_AUTOMATION, 0)
+		{/Automation}
+		
+		{Init & Default Values}
+		$min_velocity := 1
+		$max_velocity := 127
+		$linear_velocity := 1
+		$exp_1_velocity := 0
+		$exp_2_velocity := 0
+		$fix_velocity := 0
+		
+		set_control_par(%velocity_id[0], $CONTROL_PAR_DEFAULT_VALUE, 1)
+		set_control_par(%velocity_id[1], $CONTROL_PAR_DEFAULT_VALUE, 127)
+		{/Init & Default Values}
+		
+		{Other}		
+		declare $mode_velocity {the button states of the four velocity curves}
+		make_persistent ($mode_velocity)
+		
+		declare const $EXP_SHAPE := 20
+		
+		declare %table[128]
+		
+		declare $CShow
+		make_persistent ($CShow)
+		
+		declare %table_2[128]
+	 
+		declare $curve
+		make_persistent ($curve)
+		$curve := 0
+		
+		declare const $Shape := 35
+		
+		declare $helper
+		declare %helper_2[128]
+		declare $helper_3
+		declare $helper_4
+		declare $knob_helper
+		$count_1 := 1
+		while ($count_1 < 128)
+			%table[$count_1] := $count_1
+			inc ($count_1)
+		end while
+		
+		make_persistent (%table)
+		make_persistent ($curve)
+		
+		declare %shape_form[128]
+		declare %curve_form[128]
+		declare %comp_form[128]
+		$count_1 := 0
+		while($count_1 < 128)
+			%shape_form[$count_1] := $count_1*100
+			%curve_form[$count_1] := $count_1*100
+			%comp_form[$count_1] := $count_1
+			inc($count_1)
+		end while
+		make_persistent(%curve_form)
+		make_persistent(%shape_form)
+		make_persistent(%comp_form)
+		declare %curve_table_helper[128]
+		declare %curve_deriv[128]
+		declare $kurven_hoehe
+		
+		$knob_helper := ($Shape *(-1) + 1000)
+		$count_1 := 0
+		$helper := 1000
+		$kurven_hoehe := 0
+		while($count_1 < 64)
+			$helper := ($helper * $knob_helper)/1000
+			%curve_deriv[$count_1] := $helper
+			%curve_deriv[127-$count_1] := $helper
+			$kurven_hoehe := $kurven_hoehe + (%curve_deriv[$count_1]*2)
+			inc($count_1)
+		end while
+		$count_1 := 1
+		%curve_table_helper[0] := 0
+		while ($count_1 <128)
+			%curve_table_helper[$count_1] := ((%curve_table_helper[$count_1-1]+%curve_deriv[$count_1]))
+			inc($count_1)
+		end while
+		$count_1 := 0
+		while ($count_1 <128)
+			%shape_form[$count_1] := ((%curve_table_helper[$count_1]*128)/(($kurven_hoehe)/100))
+			inc($count_1)
+		end while
+		$count_1 := 0
+		while ($count_1 <128)
+			%shape_form[$count_1] := (%shape_form[$count_1]*12700)/%shape_form[127]
+			inc($count_1)
+		end while
+		{/Other}
+	{/Control Group "Velocity"}
+	
+	{Control Group "KIT VIEW"}
+	declare ui_button $audition
+	declare ui_button $show_triggers
+	
+	{ui_ids}
+	declare %kit_view_id[2]
+	%kit_view_id[0] := get_ui_id($audition)
+	%kit_view_id[1] := get_ui_id($show_triggers)
+	{/ui_ids}
+	
+	{Position}
+	set_control_par(%kit_view_id[0],$CONTROL_PAR_POS_X,573)
+	set_control_par(%kit_view_id[0],$CONTROL_PAR_POS_Y,270)
+	set_control_par(%kit_view_id[1],$CONTROL_PAR_POS_X,573)
+	set_control_par(%kit_view_id[1],$CONTROL_PAR_POS_Y,320)
+	{/Position}
+	
+	{Size}
+	set_control_par(%kit_view_id[0],$CONTROL_PAR_WIDTH,23)
+	set_control_par(%kit_view_id[0],$CONTROL_PAR_HEIGHT,23)
+	set_control_par(%kit_view_id[1],$CONTROL_PAR_WIDTH,23)
+	set_control_par(%kit_view_id[1],$CONTROL_PAR_HEIGHT,23)
+	{/Size}
+
+	{Pictures}
+	set_control_par_str(%kit_view_id[0], $CONTROL_PAR_PICTURE, "v1_2_settings_checkbox_btn")
+	set_control_par_str(%kit_view_id[1], $CONTROL_PAR_PICTURE, "v1_2_settings_checkbox_btn")
+	{/Pictures}
+	
+	
+	{Text}
+	set_control_par_str(%kit_view_id[0], $CONTROL_PAR_TEXT, "")
+	set_control_par_str(%kit_view_id[1], $CONTROL_PAR_TEXT, "")
+	{/Text}
+	
+	{Persistency}
+	make_persistent ($audition)
+	make_persistent ($show_triggers)
+	{/Persistency}
+
+	{Help Text}
+	set_control_help($audition,"Audition: Turn this on to audition the sound of an instrument in the kit page by clicking on it.")
+	set_control_help($show_triggers,"Show Triggers: If this switch is on, the trigger animation will show which instrument is being triggered")
+	{/Help Text}
+	
+	{Automation}
+	set_control_par(%kit_view_id[0], $CONTROL_PAR_ALLOW_AUTOMATION, 0)
+	set_control_par(%kit_view_id[1], $CONTROL_PAR_ALLOW_AUTOMATION, 0)
+	{/Automation}
+	
+	{Init & Default Values}
+	set_control_par(%kit_view_id[0], $CONTROL_PAR_DEFAULT_VALUE, 0)
+	set_control_par(%kit_view_id[1], $CONTROL_PAR_DEFAULT_VALUE, 0)
+	{/Init & Default Values}
+	
+	{Other}		
+	pgs_create_key(AUDITION, 1)
+	pgs_create_key(SHOW_TRIGGERS, 1)
+	read_persistent_var($audition)
+	read_persistent_var($show_triggers)
+	pgs_set_key_val(ACTION_TYPE,0,-1)
+	pgs_set_key_val(AUDITION, 0, $audition)
+	pgs_set_key_val(SHOW_TRIGGERS, 0, $show_triggers)
+	{/Other}
+	{/Control Group "KIT VIEW"}
+	
+		
+	{Control Group "Mapping"}
+		declare const $NUM_FACTORY_PRESETS := 10
+		declare const $MAX_NUM_USER_PRESETS := 100
+	
+		declare %FACTORY_MAPPING_DATA[$NUM_FACTORY_PRESETS * 128] := (-1)
+		declare %user_mapping_data[$MAX_NUM_USER_PRESETS * 128 + 1] := (-1)
+		declare !user_mapping_names[$MAX_NUM_USER_PRESETS]
+		declare %num_user_presets[1] := (0)
+		declare %current_mapping_data[128] := (-1)
+		declare %inverse_mapping_data[128] := (-1)
+		
+		{Default Mapping}
+		$count_1 := 0
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 22] := 74
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 23] := 82
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 24] := 78
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 25] := 86
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 26] := 90
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 27] := 108
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 28] := 109
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 29] := 111
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 30] := 112
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 31] := 102
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 32] := 103
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 33] := 100
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 34] := 101
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 35] := 99
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 36] := 0
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 37] := 11
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 38] := 4
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 39] := 10
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 40] := 7
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 41] := 50
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 42] := 22
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 43] := 50
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 44] := 28
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 45] := 43
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 46] := 30
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 47] := 36
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 48] := 72
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 49] := 71
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 50] := 73
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 51] := 80
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 52] := 79
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 53] := 81
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 54] := 76
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 55] := 75
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 56] := 77
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 57] := 83
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 58] := 84
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 59] := 87
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 60] := 2{}
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 61] := 15
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 62] := 12
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 63] := 13
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 64] := 14
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 65] := 53
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 66] := 19
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 67] := 53
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 68] := 25
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 69] := 46
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 70] := 29
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 71] := 39
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 72] := 54
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 73] := 54
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 74] := 47
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 75] := 40
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 76] := 31
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 77] := 32
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 78] := 33
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 79] := 34
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 80] := 35
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 81] := 5
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 83] := 6
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 84] := 8
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 85] := 20
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 86] := 9
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 87] := 21
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 88] := 51
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 89] := 52
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 90] := 23
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 91] := 51
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 92] := 24
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 93] := 52
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 94] := 26
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 95] := 44
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 96] := 45
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 97] := 27
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 98] := 37
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 100] := 38
+		
+		{GM Mapping}
+		$count_1 := 1
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 0] := 121
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 1] := 120
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 2] := 118
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 3] := 117
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 4] := 115
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 5] := 114
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 6] := 107
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 7] := 106
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 8] := 105
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 9] := 104
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 10] := 112
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 11] := 109
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 12] := 74
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 13] := 78
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 14] := 82
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 15] := 86
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 16] := 90
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 17] := 94
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 18] := 98
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 19] := 8
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 20] := 18
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 21] := 9
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 22] := 17
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 23] := 5
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 24] := 6
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 25] := 15
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 26] := 7
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 27] := 13
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 28] := 12
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 29] := 14
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 30] := 16
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 31] := 99
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 32] := 100
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 33] := 3
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 34] := 1
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 35] := 2
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 36] := 0
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 37] := 11
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 38] := 4
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 39] := 101
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 40] := 10
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 41] := 57
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 42] := 22
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 43] := 50
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 44] := 28
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 45] := 43
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 46] := 30
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 47] := 46
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 48] := 36
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 49] := 71
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 50] := 39
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 51] := 80
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 52] := 83
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 53] := 81
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 54] := 102
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 55] := 87
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 56] := 108
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 57] := 75
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 58] := 111
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 59] := 72
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 60] := 73
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 61] := 79
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 62] := 77
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 63] := 76
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 64] := 84
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 65] := 60
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 66] := 19
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 67] := 53
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 68] := 25
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 69] := 31
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 70] := 29
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 71] := 32
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 72] := 33
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 73] := 34
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 74] := 35
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 75] := 58
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 76] := 59
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 77] := 51
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 78] := 52
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 79] := 44
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 80] := 45
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 81] := 37
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 82] := 38
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 83] := 103
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 84] := 61
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 85] := 54
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 86] := 47
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 87] := 40
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 88] := 62
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 89] := 63
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 90] := 55
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 91] := 56
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 92] := 48
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 93] := 49
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 94] := 41
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 95] := 42
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 96] := 64
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 97] := 67
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 98] := 65
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 99] := 66
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 100] := 68
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 101] := 69
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 102] := 70
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 103] := 21
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 104] := 20
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 105] := 24
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 106] := 23
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 107] := 27
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 108] := 26
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 109] := 85
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 110] := 88
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 111] := 89
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 112] := 91
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 113] := 92
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 114] := 93
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 115] := 95
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 116] := 96
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 117] := 97
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 118] := 110
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 119] := 113
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 120] := 116
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 121] := 119
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 122] := 122
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 123] := 123
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 124] := 124
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 125] := 125
+		
+		{V-Drums 1 Mapping}
+		$count_1 := 2
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 0] := 74
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 1] := 78
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 2] := 82
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 3] := 86
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 4] := 90
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 5] := 94
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 6] := 98
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 7] := 105
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 8] := 104
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 9] := 121
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 10] := 120
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 11] := 118
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 12] := 117
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 13] := 111
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 14] := 112
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 15] := 108
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 16] := 109
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 17] := 102
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 18] := 103
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 19] := 100
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 20] := 101
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 21] := 99
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 22] := 25
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 23] := 18
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 24] := 17
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 25] := 79
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 26] := 30
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 27] := 16
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 28] := 15
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 29] := 14
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 30] := 12
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 31] := 7
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 32] := 13
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 33] := 3
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 34] := 1
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 35] := 2
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 36] := 0
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 37] := 11
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 38] := 4
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 39] := 60
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 40] := 10
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 41] := 57
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 42] := 22
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 43] := 50
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 44] := 28
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 45] := 43
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 46] := 30
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 47] := 46
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 48] := 36
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 49] := 71
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 50] := 39
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 51] := 80
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 52] := 75
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 53] := 81
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 54] := 83
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 55] := 71
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 56] := 87
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 57] := 75
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 58] := 53
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 59] := 79
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 60] := 72
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 61] := 73
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 62] := 76
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 63] := 77
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 64] := 84
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 65] := 85
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 66] := 88
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 67] := 89
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 68] := 19
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 69] := 20
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 70] := 21
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 71] := 23
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 72] := 24
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 73] := 26
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 74] := 27
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 75] := 29
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 76] := 31
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 77] := 32
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 78] := 33
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 79] := 34
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 80] := 35
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 81] := 5
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 82] := 6
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 83] := 8
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 84] := 9
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 85] := 37
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 86] := 38
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 87] := 44
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 88] := 45
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 89] := 51
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 90] := 52
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 91] := 58
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 92] := 59
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 93] := 40
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 94] := 47
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 95] := 54
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 96] := 61
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 97] := 41
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 98] := 48
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 99] := 55
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 100] := 62
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 101] := 42
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 102] := 49
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 103] := 56
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 104] := 63
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 105] := 64
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 106] := 65
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 107] := 66
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 108] := 67
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 109] := 68
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 110] := 69
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 111] := 70
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 112] := 91
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 113] := 92
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 114] := 93
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 115] := 95
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 116] := 96
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 117] := 97
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 118] := 106
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 119] := 107
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 120] := 114
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 121] := 123
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 122] := 115
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 123] := 124
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 124] := 113
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 125] := 116
+
+		{V-Drums 2 Mapping}
+		$count_1 := 3
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 0] := 74
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 1] := 78
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 2] := 82
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 3] := 86
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 4] := 90
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 5] := 94
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 6] := 98
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 7] := 105
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 8] := 104
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 9] := 121
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 10] := 120
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 11] := 118
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 12] := 117
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 13] := 111
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 14] := 112
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 15] := 108
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 16] := 109
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 17] := 102
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 18] := 103
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 19] := 100
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 20] := 101
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 21] := 99
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 22] := 25
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 23] := 18
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 24] := 17
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 25] := 79
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 26] := 30
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 27] := 16
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 28] := 15
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 29] := 14
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 30] := 12
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 31] := 57
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 32] := 13
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 33] := 3
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 34] := 1
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 35] := 2
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 36] := 0
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 37] := 11
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 38] := 4
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 39] := 60
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 40] := 10
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 41] := 50
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 42] := 22
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 43] := 53
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 44] := 28
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 45] := 43
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 46] := 30
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 47] := 46
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 48] := 36
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 49] := 72
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 50] := 39
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 51] := 80
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 52] := 75
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 53] := 79
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 54] := 83
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 55] := 71
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 56] := 87
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 57] := 76
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 58] := 7
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 59] := 81
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 60] := 119
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 61] := 73
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 62] := 122
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 63] := 77
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 64] := 84
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 65] := 85
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 66] := 88
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 67] := 89
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 68] := 19
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 69] := 20
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 70] := 21
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 71] := 23
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 72] := 24
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 73] := 26
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 74] := 27
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 75] := 29
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 76] := 31
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 77] := 32
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 78] := 33
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 79] := 34
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 80] := 35
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 81] := 5
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 82] := 6
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 83] := 8
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 84] := 9
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 85] := 37
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 86] := 38
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 87] := 44
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 88] := 45
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 89] := 51
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 90] := 52
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 91] := 58
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 92] := 59
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 93] := 40
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 94] := 47
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 95] := 54
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 96] := 61
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 97] := 41
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 98] := 48
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 99] := 55
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 100] := 62
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 101] := 42
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 102] := 49
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 103] := 56
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 104] := 63
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 105] := 64
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 106] := 65
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 107] := 66
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 108] := 67
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 109] := 68
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 110] := 69
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 111] := 70
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 112] := 91
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 113] := 92
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 114] := 93
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 115] := 95
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 116] := 96
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 117] := 97
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 118] := 106
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 119] := 107
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 120] := 114
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 121] := 123
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 122] := 115
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 123] := 124
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 124] := 113
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 125] := 116
+
+		{DrumIt Five Mapping}
+		$count_1 := 4
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 1] := 93
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 2] := 94
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 3] := 117
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 4] := 118
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 5] := 119
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 6] := 120
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 7] := 121
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 8] := 122
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 9] := 123
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 10] := 124
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 11] := 125
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 12] := 110
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 13] := 115
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 14] := 116
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 15] := 106
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 16] := 107
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 17] := 113
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 18] := 114
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 19] := 104
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 20] := 105
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 21] := 111
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 22] := 112
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 23] := 108
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 24] := 109
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 25] := 102
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 26] := 103
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 27] := 100
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 28] := 101
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 29] := 99
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 30] := 18
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 31] := 17
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 32] := 16
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 33] := 3
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 34] := 1
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 35] := 2
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 36] := 0
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 37] := 11
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 38] := 7
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 39] := 12
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 40] := 15
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 41] := 4
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 42] := 10
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 43] := 13
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 44] := 14
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 45] := 22
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 46] := 30
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 47] := 28
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 48] := 19
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 49] := 25
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 50] := 36
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 51] := 39
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 52] := 40
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 53] := 43
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 54] := 46
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 55] := 47
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 56] := 91
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 57] := 50
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 58] := 53
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 59] := 54
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 60] := 57
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 61] := 60
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 62] := 61
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 63] := 92
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 64] := 73
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 65] := 72
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 66] := 71
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 67] := 74
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 68] := 84
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 69] := 83
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 70] := 86
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 71] := 81
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 72] := 80
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 73] := 79
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 74] := 82
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 75] := 87
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 76] := 90
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 77] := 77
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 78] := 76
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 79] := 75
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 80] := 78
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 81] := 29
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 82] := 31
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 83] := 32
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 84] := 33
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 85] := 34
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 86] := 35
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 87] := 41
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 88] := 42
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 89] := 48
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 90] := 49
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 91] := 55
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 92] := 56
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 93] := 62
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 94] := 63
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 95] := 5
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 96] := 6
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 97] := 8
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 98] := 9
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 99] := 20
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 100] := 21
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 101] := 23
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 102] := 24
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 103] := 26
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 104] := 27
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 105] := 37
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 106] := 38
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 107] := 44
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 108] := 45
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 109] := 51
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 110] := 52
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 111] := 58
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 112] := 59
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 113] := 64
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 114] := 65
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 115] := 66
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 116] := 67
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 117] := 68
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 118] := 69
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 119] := 70
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 120] := 85
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 121] := 88
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 122] := 89
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 123] := 95
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 124] := 96
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 125] := 97
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 126] := 98
+
+		{EZDrummer Mapping}
+		$count_1 := 5
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 0] := 7
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 1] := 20
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 2] := 21
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 3] := 111
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 4] := 112
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 5] := 102
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 6] := 103
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 7] := 100
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 8] := 101
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 9] := 99
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 10] := 28
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 12] := 31
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 13] := 32
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 14] := 33
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 15] := 34
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 16] := 35
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 17] := 35
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 18] := 30
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 19] := 30
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 20] := 3
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 21] := 28
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 22] := 25
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 24] := 31
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 25] := 32
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 26] := 29
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 26] := 33
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 27] := 71
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 28] := 75
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 29] := 79
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 30] := 83
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 31] := 87
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 32] := 91
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 33] := 5
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 34] := 1
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 35] := 2
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 36] := 0
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 37] := 11
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 38] := 4
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 39] := 6
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 39] := 13
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 40] := 10
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 41] := 52
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 42] := 22
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 43] := 50
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 44] := 28
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 45] := 45
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 46] := 30
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 47] := 43
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 48] := 38
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 49] := 71
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 50] := 36
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 51] := 80
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 52] := 75
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 52] := 83
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 53] := 81
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 54] := 74
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 55] := 71
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 55] := 87
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 56] := 108
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 57] := 75
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 58] := 78
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 59] := 79
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 60] := 35
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 61] := 24
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 62] := 27
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 63] := 19
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 64] := 26
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 65] := 23
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 66] := 14
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 67] := 17
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 68] := 16
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 69] := 12
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 70] := 13
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 71] := 15
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 72] := 61
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 73] := 60
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 74] := 54
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 75] := 53
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 76] := 109
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 77] := 57
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 78] := 59
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 79] := 47
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 80] := 46
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 81] := 40
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 82] := 39
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 83] := 86
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 84] := 72
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 85] := 73
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 86] := 76
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 87] := 77
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 88] := 84
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 89] := 88
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 90] := 89
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 91] := 91
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 92] := 95
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 93] := 92
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 94] := 82
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 94] := 94
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 95] := 90
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 95] := 98
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 96] := 96
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 97] := 85
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 98] := 93
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 99] := 97
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 100] := 18
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 101] := 41
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 102] := 42
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 103] := 48
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 104] := 49
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 105] := 55
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 106] := 56
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 107] := 62
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 108] := 63
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 109] := 64
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 110] := 65
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 111] := 66
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 112] := 67
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 113] := 68
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 114] := 69
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 115] := 70
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 116] := 5
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 117] := 6
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 118] := 8
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 119] := 9
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 120] := 117
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 121] := 118
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 122] := 104
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 123] := 105
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 124] := 113
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 125] := 114
+
+		{Superior Drummer Mapping}
+		$count_1 := 6
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 1] := 20
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 2] := 21
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 3] := 111
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 4] := 112
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 5] := 102
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 6] := 103
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 7] := 100
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 8] := 101
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 9] := 99
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 10] := 28
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 12] := 31
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 13] := 32
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 14] := 33
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 15] := 34
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 16] := 35
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 17] := 35
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 18] := 30
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 19] := 30
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 20] := 3
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 21] := 28
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 22] := 25
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 24] := 31
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 25] := 32
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 26] := 29
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 26] := 33
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 27] := 71
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 28] := 75
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 29] := 79
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 30] := 83
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 31] := 87
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 32] := 91
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 33] := 7
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 34] := 1
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 35] := 2
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 36] := 0
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 37] := 11
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 38] := 4
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 39] := 13
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 40] := 10
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 41] := 57
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 42] := 22
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 43] := 50
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 44] := 28
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 45] := 45
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 46] := 30
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 47] := 43
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 48] := 38
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 49] := 71
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 50] := 36
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 51] := 80
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 52] := 83
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 53] := 81
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 54] := 74
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 55] := 87
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 56] := 108
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 57] := 75
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 58] := 78
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 59] := 79
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 60] := 35
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 61] := 24
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 62] := 27
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 63] := 19
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 64] := 26
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 65] := 23
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 66] := 14
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 67] := 17
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 68] := 16
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 69] := 12
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 70] := 13
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 71] := 15
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 72] := 61
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 73] := 60
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 74] := 54
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 75] := 53
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 76] := 109
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 77] := 59
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 78] := 52
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 79] := 47
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 80] := 46
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 81] := 40
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 82] := 39
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 83] := 86
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 84] := 72
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 85] := 73
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 86] := 76
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 87] := 77
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 88] := 84
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 89] := 88
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 90] := 89
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 91] := 91
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 92] := 95
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 93] := 92
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 94] := 82
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 94] := 94
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 95] := 90
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 95] := 98
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 96] := 96
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 97] := 85
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 98] := 93
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 99] := 97
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 100] := 18
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 101] := 41
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 102] := 42
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 103] := 48
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 104] := 49
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 105] := 55
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 106] := 56
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 107] := 62
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 108] := 63
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 109] := 64
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 110] := 65
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 111] := 66
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 112] := 67
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 113] := 68
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 114] := 69
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 115] := 70
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 116] := 5
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 117] := 6
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 118] := 8
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 119] := 9
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 120] := 117
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 121] := 118
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 122] := 104
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 123] := 105
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 124] := 113
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 125] := 114
+
+		{BFD Mapping}
+		$count_1 := 7
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 0] := 115
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 1] := 116
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 2] := 113
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 3] := 114
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 4] := 110
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 5] := 106
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 6] := 107
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 7] := 120
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 8] := 121
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 9] := 117
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 10] := 118
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 11] := 111
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 12] := 112
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 13] := 108
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 14] := 109
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 15] := 104
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 16] := 105
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 17] := 102
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 18] := 103
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 19] := 100
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 20] := 101
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 21] := 99
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 22] := 3
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 23] := 1
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 24] := 20
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 25] := 21
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 26] := 23
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 27] := 26
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 28] := 27
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 29] := 29
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 30] := 31
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 31] := 24
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 32] := 35
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 33] := 34
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 34] := 19
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 35] := 2
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 36] := 0
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 37] := 11
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 38] := 4
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 39] := 13
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 40] := 10
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 41] := 12
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 42] := 22
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 43] := 50
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 44] := 28
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 45] := 43
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 46] := 30
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 47] := 36
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 48] := 25
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 49] := 71
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 50] := 32
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 51] := 80
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 52] := 33
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 53] := 81
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 54] := 73
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 55] := 75
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 56] := 77
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 57] := 74
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 58] := 78
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 59] := 82
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 60] := 79
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 61] := 83
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 62] := 87
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 63] := 72
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 64] := 76
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 65] := 84
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 66] := 86
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 67] := 90
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 69] := 7
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 69] := 14
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 70] := 15
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 71] := 57
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 72] := 60
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 73] := 61
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 74] := 53
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 75] := 54
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 76] := 46
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 77] := 47
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 78] := 39
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 79] := 40
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 80] := 16
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 81] := 17
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 82] := 18
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 83] := 41
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 84] := 42
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 85] := 48
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 86] := 49
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 87] := 55
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 88] := 56
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 89] := 62
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 90] := 63
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 91] := 5
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 92] := 6
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 93] := 8
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 94] := 9
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 95] := 58
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 96] := 59
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 97] := 51
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 98] := 52
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 99] := 44
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 100] := 45
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 101] := 37
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 102] := 38
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 103] := 64
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 104] := 67
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 105] := 68
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 106] := 69
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 107] := 70
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 108] := 65
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 109] := 66
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 110] := 85
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 111] := 88
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 112] := 89
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 113] := 91
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 114] := 92
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 115] := 93
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 116] := 94
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 117] := 95
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 118] := 96
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 119] := 97
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 120] := 98
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 121] := 119
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 122] := 122
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 123] := 123
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 124] := 124
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 125] := 125
+
+		{iMap Mapping}
+		$count_1 := 8
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 0] := 117
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 1] := 118
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 2] := 111
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 3] := 112
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 4] := 108
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 5] := 109
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 6] := 102
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 7] := 103
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 8] := 100
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 9] := 101
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 10] := 99
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 11] := 64
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 12] := 65
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 13] := 66
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 14] := 67
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 15] := 68
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 16] := 69
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 17] := 70
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 18] := 41
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 19] := 42
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 20] := 48
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 21] := 49
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 22] := 55
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 23] := 56
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 24] := 62
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 25] := 63
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 26] := 58
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 27] := 59
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 28] := 36
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 29] := 40
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 30] := 57
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 31] := 43
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 32] := 60
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 33] := 47
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 34] := 61
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 35] := 50
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 36] := 54
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 37] := 34
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 38] := 5
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 39] := 33
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 40] := 8
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 41] := 29
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 42] := 12
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 43] := 3
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 44] := 13
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 45] := 1
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 46] := 6
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 47] := 2
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 48] := 0
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 49] := 11
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 50] := 4
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 51] := 10
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 52] := 7
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 53] := 28
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 54] := 22
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 55] := 19
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 56] := 25
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 57] := 31
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 58] := 30
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 59] := 35
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 60] := 71
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 61] := 72
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 62] := 80
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 63] := 81
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 64] := 37
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 65] := 38
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 66] := 39
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 67] := 44
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 68] := 46
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 69] := 45
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 70] := 53
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 71] := 51
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 72] := 52
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 73] := 73
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 74] := 78
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 75] := 77
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 76] := 79
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 77] := 74
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 78] := 87
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 79] := 75
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 80] := 76
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 81] := 83
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 82] := 84
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 83] := 86
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 84] := 82
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 85] := 90
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 86] := 14
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 87] := 15
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 88] := 16
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 89] := 17
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 90] := 18
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 91] := 9
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 92] := 20
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 93] := 21
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 94] := 23
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 95] := 24
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 96] := 26
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 97] := 27
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 98] := 32
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 99] := 85
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 100] := 88
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 101] := 89
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 102] := 91
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 103] := 92
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 104] := 93
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 105] := 94
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 106] := 95
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 107] := 96
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 108] := 97
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 109] := 98
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 110] := 104
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 111] := 105
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 112] := 106
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 113] := 107
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 114] := 110
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 115] := 113
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 116] := 114
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 117] := 115
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 118] := 116
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 119] := 119
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 120] := 120
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 121] := 121
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 122] := 122
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 123] := 123
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 124] := 124
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 125] := 125
+
+		{Addictive Drums Mapping}
+		$count_1 := 9
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 0] := 114
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 1] := 115
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 2] := 116
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 3] := 120
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 4] := 121
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 5] := 123
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 6] := 124
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 7] := 30
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 8] := 30
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 9] := 23
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 10] := 24
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 11] := 26
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 12] := 27
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 13] := 58
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 14] := 59
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 15] := 61
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 16] := 51
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 17] := 52
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 18] := 54
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 19] := 44
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 20] := 45
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 21] := 47
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 22] := 37
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 23] := 38
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 24] := 40
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 25] := 18
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 26] := 4
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 27] := 13
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 28] := 9
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 29] := 12
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 30] := 14
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 31] := 16
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 32] := 17
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 33] := 3
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 34] := 1
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 35] := 2
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 36] := 0
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 37] := 10
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 38] := 5
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 39] := 10
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 40] := 6
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 41] := 8
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 42] := 11
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 43] := 7
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 44] := 15
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 45] := 80
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 46] := 71
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 47] := 108
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 48] := 28
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 49] := 19
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 50] := 25
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 51] := 22
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 52] := 31
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 53] := 21
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 54] := 32
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 55] := 33
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 56] := 34
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 57] := 35
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 58] := 20
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 59] := 29
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 60] := 80
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 61] := 81
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 62] := 79
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 63] := 82
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 64] := 109
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 65] := 57
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 66] := 60
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 67] := 50
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 68] := 53
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 69] := 43
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 70] := 46
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 71] := 36
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 72] := 39
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 73] := 100
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 74] := 101
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 75] := 99
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 76] := 102
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 77] := 71
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 78] := 74
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 79] := 75
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 80] := 78
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 81] := 83
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 82] := 86
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 83] := 87
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 84] := 90
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 85] := 72
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 86] := 73
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 87] := 76
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 88] := 77
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 89] := 84
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 90] := 85
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 91] := 88
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 92] := 89
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 93] := 62
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 94] := 63
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 95] := 55
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 96] := 56
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 97] := 48
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 98] := 49
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 99] := 41
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 100] := 42
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 101] := 103
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 102] := 111
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 103] := 112
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 104] := 117
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 105] := 118
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 106] := 91
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 107] := 92
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 108] := 93
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 109] := 94
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 110] := 95
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 111] := 96
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 112] := 97
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 113] := 98
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 114] := 64
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 115] := 65
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 116] := 66
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 117] := 67
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 118] := 68
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 119] := 69
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 120] := 70
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 121] := 104
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 122] := 105
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 123] := 106
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 124] := 107
+		%FACTORY_MAPPING_DATA[$count_1 * 128 + 125] := 113
+		
+		declare !ARTICULATION_NAMES[126]
+		{Kick}
+		!ARTICULATION_NAMES[0] := "DAMPENED"
+		!ARTICULATION_NAMES[1] := "HALF OPEN"
+		!ARTICULATION_NAMES[2] := "OPEN"
+		!ARTICULATION_NAMES[3] := "MISC"			{*}
+		
+		{Snare}
+		!ARTICULATION_NAMES[4] := "CENTER L/R"
+		!ARTICULATION_NAMES[5] := "CENTER L"
+		!ARTICULATION_NAMES[6] := "CENTER R"
+		!ARTICULATION_NAMES[7] := "HALFWAY L/R"
+		!ARTICULATION_NAMES[8] := "HALFWAY L"
+		!ARTICULATION_NAMES[9] := "HALFWAY R"
+		!ARTICULATION_NAMES[10] := "RIMSHOT"
+		!ARTICULATION_NAMES[11] := "SIDESTICK"
+		!ARTICULATION_NAMES[12] := "FLAM"
+		!ARTICULATION_NAMES[13] := "ROLL"
+		!ARTICULATION_NAMES[14] := "WIRES OFF"
+		!ARTICULATION_NAMES[15] := "RIM ONLY"
+		!ARTICULATION_NAMES[16] := "MISC 1"			{*}
+		!ARTICULATION_NAMES[17] := "MISC 2"			{*}
+		!ARTICULATION_NAMES[18] := "Misc 3"			{*}
+		
+		{Hihat}
+		!ARTICULATION_NAMES[19] := "CLOSED TIGHT TIP L/R"
+		!ARTICULATION_NAMES[20] := "CLOSED TIGHT TIP L"
+		!ARTICULATION_NAMES[21] := "CLOSED TIGHT TIP R"
+		!ARTICULATION_NAMES[22] := "CLOSED TIP L/R"
+		!ARTICULATION_NAMES[23] := "CLOSED TIP L"
+		!ARTICULATION_NAMES[24] := "CLOSED TIP R"
+		!ARTICULATION_NAMES[25] := "CLOSED SHANK L/R"
+		!ARTICULATION_NAMES[26] := "CLOSED SHANK L"
+		!ARTICULATION_NAMES[27] := "CLOSED SHANK R"
+		!ARTICULATION_NAMES[28] := "CLOSED PEDAL"
+		!ARTICULATION_NAMES[29] := "OPEN PEDAL"
+		!ARTICULATION_NAMES[30] := "OPEN CONTROL"
+		!ARTICULATION_NAMES[31] := "OPEN 1/4"
+		!ARTICULATION_NAMES[32] := "OPEN 1/2"
+		!ARTICULATION_NAMES[33] := "OPEN 3/4"
+		!ARTICULATION_NAMES[34] := "OPEN LOOSE"
+		!ARTICULATION_NAMES[35] := "OPEN FULL"
+
+		{Tom 1}
+		!ARTICULATION_NAMES[36] := "CENTER L/R"
+		!ARTICULATION_NAMES[37] := "CENTER L"
+		!ARTICULATION_NAMES[38] := "CENTER R"
+		!ARTICULATION_NAMES[39] := "RIMSHOT"
+		!ARTICULATION_NAMES[40] := "RIM ONLY"
+		!ARTICULATION_NAMES[41] := "MISC 1"			{*}
+		!ARTICULATION_NAMES[42] := "MISC 2"			{*}
+		
+		{Tom 2}
+		!ARTICULATION_NAMES[43] := "CENTER L/R"
+		!ARTICULATION_NAMES[44] := "CENTER L"
+		!ARTICULATION_NAMES[45] := "CENTER R"
+		!ARTICULATION_NAMES[46] := "RIMSHOT"
+		!ARTICULATION_NAMES[47] := "RIM ONLY"
+		!ARTICULATION_NAMES[48] := "MISC 1"			{*}
+		!ARTICULATION_NAMES[49] := "MISC 2"			{*}
+		
+		{Tom 3}
+		!ARTICULATION_NAMES[50] := "CENTER L/R"
+		!ARTICULATION_NAMES[51] := "CENTER L"
+		!ARTICULATION_NAMES[52] := "CENTER R"
+		!ARTICULATION_NAMES[53] := "RIMSHOT"
+		!ARTICULATION_NAMES[54] := "RIM ONLY"
+		!ARTICULATION_NAMES[55] := "MISC 1"			{*}
+		!ARTICULATION_NAMES[56] := "MISC 2"			{*}
+		
+		{Tom 4}
+		!ARTICULATION_NAMES[57] := "CENTER L/R"
+		!ARTICULATION_NAMES[58] := "CENTER L"
+		!ARTICULATION_NAMES[59] := "CENTER R"
+		!ARTICULATION_NAMES[60] := "RIMSHOT"
+		!ARTICULATION_NAMES[61] := "RIM ONLY"
+		!ARTICULATION_NAMES[62] := "MISC 1"			{*}
+		!ARTICULATION_NAMES[63] := "MISC 2"			{*}
+
+		{Tom 5}
+		!ARTICULATION_NAMES[64] := "CENTER L/R"
+		!ARTICULATION_NAMES[65] := "CENTER L"
+		!ARTICULATION_NAMES[66] := "CENTER R"
+		!ARTICULATION_NAMES[67] := "RIMSHOT"
+		!ARTICULATION_NAMES[68] := "RIM ONLY"
+		!ARTICULATION_NAMES[69] := "MISC 1"			{*}
+		!ARTICULATION_NAMES[70] := "MISC 2"			{*}
+		
+		{Cymbal 1}
+		!ARTICULATION_NAMES[71] := "EDGE"
+		!ARTICULATION_NAMES[72] := "TIP"
+		!ARTICULATION_NAMES[73] := "BELL"
+		!ARTICULATION_NAMES[74] := "CHOKE"
+		
+		{Cymbal 2}
+		!ARTICULATION_NAMES[75] := "EDGE"
+		!ARTICULATION_NAMES[76] := "TIP"
+		!ARTICULATION_NAMES[77] := "BELL"
+		!ARTICULATION_NAMES[78] := "CHOKE"
+		
+		{Cymbal 3}
+		!ARTICULATION_NAMES[79] := "EDGE"
+		!ARTICULATION_NAMES[80] := "TIP"
+		!ARTICULATION_NAMES[81] := "BELL"
+		!ARTICULATION_NAMES[82] := "CHOKE"
+		
+		{Cymbal 4}
+		!ARTICULATION_NAMES[83] := "EDGE"
+		!ARTICULATION_NAMES[84] := "TIP"
+		!ARTICULATION_NAMES[85] := "BELL"
+		!ARTICULATION_NAMES[86] := "CHOKE"
+		
+		{Cymbal 5}
+		!ARTICULATION_NAMES[87] := "EDGE"
+		!ARTICULATION_NAMES[88] := "TIP"
+		!ARTICULATION_NAMES[89] := "BELL"
+		!ARTICULATION_NAMES[90] := "CHOKE"
+		
+		{Cymbal 6}
+		!ARTICULATION_NAMES[91] := "EDGE"
+		!ARTICULATION_NAMES[92] := "TIP"
+		!ARTICULATION_NAMES[93] := "BELL"
+		!ARTICULATION_NAMES[94] := "CHOKE"
+		
+		{Cymbal 7}
+		!ARTICULATION_NAMES[95] := "EDGE"
+		!ARTICULATION_NAMES[96] := "TIP"
+		!ARTICULATION_NAMES[97] := "BELL"
+		!ARTICULATION_NAMES[98] := "CHOKE"
+		
+		{constants that are to be set per kit}
+		{Perc 1 - Sticks}
+		!ARTICULATION_NAMES[99] := "HIT"
+		
+		{Perc 2 - Clap}
+		!ARTICULATION_NAMES[100] := "SOLO"
+		!ARTICULATION_NAMES[101] := "MULTI"
+		
+		{Perc 3 - Tambourine}
+		!ARTICULATION_NAMES[102] := "TAP"
+		!ARTICULATION_NAMES[103] := "SHAKE"
+		
+		{Perc 4 - Cowbell}
+		!ARTICULATION_NAMES[108] := "LOW OPEN"
+		!ARTICULATION_NAMES[109] := "LOW MUTED"
+		!ARTICULATION_NAMES[111] := "HIGH OPEN"
+		!ARTICULATION_NAMES[112] := "HIGH MUTED"
+
+		declare !artic_visual_name[126]
+		{Kick}
+		!artic_visual_name[0]	:= "Dampened"
+		!artic_visual_name[1]	:= "Half Open"
+		!artic_visual_name[2]	:= "Open"
+		!artic_visual_name[3]	:= "Misc"			{*}
+		
+		{Snare}
+		!artic_visual_name[4]	:= "Center L/R"
+		!artic_visual_name[5]	:= "Center L"
+		!artic_visual_name[6]	:= "Center R"
+		!artic_visual_name[7]	:= "Halfway L/R"
+		!artic_visual_name[8]	:= "Halfway L"
+		!artic_visual_name[9]	:= "Halfway R"
+		!artic_visual_name[10]	:= "Rimshot"
+		!artic_visual_name[11]	:= "Sidestick"
+		!artic_visual_name[12]	:= "Flam"
+		!artic_visual_name[13]	:= "Roll"
+		!artic_visual_name[14]	:= "Wires Off"
+		!artic_visual_name[15]	:= "Rim Only"
+		!artic_visual_name[16]	:= "Misc 1"			{*}
+		!artic_visual_name[17]	:= "Misc 2"			{*}
+		!artic_visual_name[18]	:= "Misc 3"			{*}
+		
+		{Hihat}
+		!artic_visual_name[19]	:= "Closed Tight Tip L/R"
+		!artic_visual_name[20]	:= "Closed Tight Tip L"
+		!artic_visual_name[21]	:= "Closed Tight Tip R"
+		!artic_visual_name[22]	:= "Closed Tip L/R"
+		!artic_visual_name[23]	:= "Closed Tip L"
+		!artic_visual_name[24]	:= "Closed Tip R"
+		!artic_visual_name[25]	:= "Closed Shank L/R"
+		!artic_visual_name[26]	:= "Closed Shank L"
+		!artic_visual_name[27]	:= "Closed Shank R"
+		!artic_visual_name[28]	:= "Closed Pedal"
+		!artic_visual_name[29]	:= "Open Pedal"
+		!artic_visual_name[30]	:= "Open Control"
+		!artic_visual_name[31]	:= "Open 1/4"
+		!artic_visual_name[32]	:= "Open 1/2"
+		!artic_visual_name[33]	:= "Open 3/4"
+		!artic_visual_name[34]	:= "Open LOOSE"
+		!artic_visual_name[35]	:= "Open FULL"
+
+		{Tom 1}
+		!artic_visual_name[36]	:= "Center L/R"
+		!artic_visual_name[37]	:= "Center L"
+		!artic_visual_name[38]	:= "Center R"
+		!artic_visual_name[39]	:= "Rimshot"
+		!artic_visual_name[40]	:= "Rim Only"
+		!artic_visual_name[41]	:= "Misc 1"			{*}
+		!artic_visual_name[42]	:= "Misc 2"			{*}
+		
+		{Tom 2}
+		!artic_visual_name[43]	:= "Center L/R"
+		!artic_visual_name[44]	:= "Center L"
+		!artic_visual_name[45]	:= "Center R"
+		!artic_visual_name[46]	:= "Rimshot"
+		!artic_visual_name[47]	:= "Rim Only"
+		!artic_visual_name[48]	:= "Misc 1"			{*}
+		!artic_visual_name[49]	:= "Misc 2"			{*}
+		
+		{Tom 3}
+		!artic_visual_name[50]	:= "Center L/R"
+		!artic_visual_name[51]	:= "Center L"
+		!artic_visual_name[52]	:= "Center R"
+		!artic_visual_name[53]	:= "Rimshot"
+		!artic_visual_name[54]	:= "Rim Only"
+		!artic_visual_name[55]	:= "Misc 1"			{*}
+		!artic_visual_name[56]	:= "Misc 2"			{*}
+		
+		{Tom 4}
+		!artic_visual_name[57]	:= "Center L/R"
+		!artic_visual_name[58]	:= "Center L"
+		!artic_visual_name[59]	:= "Center R"
+		!artic_visual_name[60]	:= "Rimshot"
+		!artic_visual_name[61]	:= "Rim Only"
+		!artic_visual_name[62]	:= "Misc 1"			{*}
+		!artic_visual_name[63]	:= "Misc 2"			{*}
+
+		{Tom 5}
+		!artic_visual_name[64]	:= "Center L/R"
+		!artic_visual_name[65]	:= "Center L"
+		!artic_visual_name[66]	:= "Center R"
+		!artic_visual_name[67]	:= "Rimshot"
+		!artic_visual_name[68]	:= "Rim Only"
+		!artic_visual_name[69]	:= "Misc 1"			{*}
+		!artic_visual_name[70]	:= "Misc 2"			{*}
+		
+		{Cymbal 1}
+		!artic_visual_name[71]	:= "Edge"
+		!artic_visual_name[72]	:= "Tip"
+		!artic_visual_name[73]	:= "Bell"
+		!artic_visual_name[74]	:= "Choke"
+		
+		{Cymbal 2}
+		!artic_visual_name[75]	:= "Edge"
+		!artic_visual_name[76]	:= "Tip"
+		!artic_visual_name[77]	:= "Bell"
+		!artic_visual_name[78]	:= "Choke"
+		
+		{Cymbal 3}
+		!artic_visual_name[79]	:= "Edge"
+		!artic_visual_name[80]	:= "Tip"
+		!artic_visual_name[81]	:= "Bell"
+		!artic_visual_name[82]	:= "Choke"
+		
+		{Cymbal 4}
+		!artic_visual_name[83]	:= "Edge"
+		!artic_visual_name[84]	:= "Tip"
+		!artic_visual_name[85]	:= "Bell"
+		!artic_visual_name[86]	:= "Choke"
+		
+		{Cymbal 5}
+		!artic_visual_name[87]	:= "Edge"
+		!artic_visual_name[88]	:= "Tip"
+		!artic_visual_name[89]	:= "Bell"
+		!artic_visual_name[90]	:= "Choke"
+		
+		{Cymbal 6}
+		!artic_visual_name[91]	:= "Edge"
+		!artic_visual_name[92]	:= "Tip"
+		!artic_visual_name[93]	:= "Bell"
+		!artic_visual_name[94]	:= "Choke"
+		
+		{Cymbal 7}
+		!artic_visual_name[95]	:= "Edge"
+		!artic_visual_name[96]	:= "Tip"
+		!artic_visual_name[97]	:= "Bell"
+		!artic_visual_name[98]	:= "Choke"
+		
+		{constants that are to be set per kit}
+		{Perc 1 - Sticks}
+		!artic_visual_name[99]	:= "Hit"
+		
+		{Perc 2 - Clap}
+		!artic_visual_name[100]	:= "Solo"
+		!artic_visual_name[101]	:= "Multi"
+		
+		{Perc 3 - Tambourine}
+		!artic_visual_name[102]	:= "Tap"
+		!artic_visual_name[103]	:= "Shake"
+		
+		{Perc 4 - Cowbell}
+		!artic_visual_name[108]	:= "Low Open"
+		!artic_visual_name[109]	:= "Low Muted"
+		!artic_visual_name[111]	:= "High Open"
+		!artic_visual_name[112]	:= "High Muted"
+		{/constants that are to be set per kit}
+
+		{Declarations}
+		declare ui_menu $current_mapping_preset
+		declare ui_menu $instruments
+		declare ui_menu $articulations
+		declare ui_slider $active_key (0, 127)
+		declare ui_button $prev_preset
+		declare ui_button $next_preset
+		declare ui_button $save_preset
+		declare ui_button $delete_preset
+		declare ui_button $sel_by_midi
+		declare ui_button $confirm_change
+		declare ui_button $cancel_change
+		declare ui_button $active_key_up
+		declare ui_button $active_key_dn
+		declare ui_text_edit @current_preset_name
+		{/Declarations}
+
+		{ui_ids}
+		declare %mapping_id[14]
+		%mapping_id[0] := get_ui_id($current_mapping_preset)
+		%mapping_id[1] := get_ui_id($instruments)
+		%mapping_id[2] := get_ui_id($articulations)
+		%mapping_id[3] := get_ui_id($active_key)
+		%mapping_id[4] := get_ui_id($prev_preset)
+		%mapping_id[5] := get_ui_id($next_preset)
+		%mapping_id[6] := get_ui_id($save_preset)
+		%mapping_id[7] := get_ui_id($delete_preset)
+		%mapping_id[8] := get_ui_id($sel_by_midi)
+		%mapping_id[9] := get_ui_id($confirm_change)
+		%mapping_id[10] := get_ui_id($cancel_change)
+		%mapping_id[11] := get_ui_id($active_key_up)
+		%mapping_id[12] := get_ui_id($active_key_dn)
+		%mapping_id[13] := get_ui_id(@current_preset_name)
+		{/ui_ids}
+		
+		{Help Text}
+		set_control_par_str(%mapping_id[0],$CONTROL_PAR_HELP,"Mapping Preset: Use this control to select one of the Mapping Presets. You can also click on the name of the preset to type in a new one.")
+		set_control_par_str(%mapping_id[1],$CONTROL_PAR_HELP,"Instrument: Here you can see or edit the Instrument assigned to the Note displayed in the Note field on the left.")
+		set_control_par_str(%mapping_id[2],$CONTROL_PAR_HELP,"Articulation: Here you can see or edit the Articulation assigned to the Note displayed in the Note field on the left.")
+		set_control_par_str(%mapping_id[3],$CONTROL_PAR_HELP,"Note: Use this control to select the note you would like to work on. When you select a new note, you can see the Instrument & Articulation menus showing the sound currently mapped to that note.")
+		set_control_par_str(%mapping_id[4],$CONTROL_PAR_HELP,"Previous Preset: Use this control to skip to the previous Mapping Preset.")
+		set_control_par_str(%mapping_id[5],$CONTROL_PAR_HELP,"Next Preset: Use this control to skip to the next Mapping Preset.")
+		set_control_par_str(%mapping_id[6],$CONTROL_PAR_HELP,"Save Preset: Click here to save any changes made to the current Mapping Preset. If it was a Factory Preset, a copy will be created in the user area. If it was a User Preset, and no name changes have been made, the preset will be overwritten.")
+		set_control_par_str(%mapping_id[7],$CONTROL_PAR_HELP,"Delete Preset: Click here to delete the current Mapping Preset.")
+		set_control_par_str(%mapping_id[8],$CONTROL_PAR_HELP,"Select by MIDI: Activate this control to enable selection of the Note through MIDI input. Use your MIDI keyboard to select the note to work on.")
+		set_control_par_str(%mapping_id[9],$CONTROL_PAR_HELP,"Confirm Change: Click here to confirm the changes made to the mapping of the selected note.")
+		set_control_par_str(%mapping_id[10],$CONTROL_PAR_HELP,"Cancel Change: Click here to revert any changes made to the mapping of the selected note.")
+		set_control_par_str(%mapping_id[11],$CONTROL_PAR_HELP,"Note: Use this control to select the note you would like to work on. When you select a new note, you can see the Instrument & Articulation menus showing the sound currently mapped to that note.")
+		set_control_par_str(%mapping_id[12],$CONTROL_PAR_HELP,"Note: Use this control to select the note you would like to work on. When you select a new note, you can see the Instrument & Articulation menus showing the sound currently mapped to that note.")
+		set_control_par_str(%mapping_id[13],$CONTROL_PAR_HELP,"Mapping Preset: Use this control to select one of the Mapping Presets. You can also click on the name of the preset to type in a new one.")
+		{/Help Text}
+		
+		{Mouse Behaviour}
+		set_control_par(%mapping_id[3], $CONTROL_PAR_MOUSE_BEHAVIOUR, -50)
+		{/Mouse Behaviour}
+		
+		{Font IDs}
+		set_control_par(%mapping_id[1], $CONTROL_PAR_FONT_TYPE, $FONT_2_ID)
+		set_control_par(%mapping_id[2], $CONTROL_PAR_FONT_TYPE, $FONT_2_ID)
+		set_control_par(%mapping_id[13], $CONTROL_PAR_FONT_TYPE, $FONT_2_ID)
+		{/Font IDs}
+		
+		{Text Position & Alignment}
+		set_control_par(%mapping_id[1], $CONTROL_PAR_TEXTPOS_Y, 13)
+		set_control_par(%mapping_id[1], $CONTROL_PAR_TEXT_ALIGNMENT, 1)
+		set_control_par(%mapping_id[2], $CONTROL_PAR_TEXTPOS_Y, 13)
+		set_control_par(%mapping_id[2], $CONTROL_PAR_TEXT_ALIGNMENT, 1)
+		{/Text Position & Alignment}
+		
+		{Position}
+		set_control_par(%mapping_id[0],$CONTROL_PAR_POS_X,228)
+		set_control_par(%mapping_id[0],$CONTROL_PAR_POS_Y,208)
+		
+		set_control_par(%mapping_id[1],$CONTROL_PAR_POS_X,160)
+		set_control_par(%mapping_id[1],$CONTROL_PAR_POS_Y,263)
+		
+		set_control_par(%mapping_id[2],$CONTROL_PAR_POS_X,298)
+		set_control_par(%mapping_id[2],$CONTROL_PAR_POS_Y,263)
+		
+		set_control_par(%mapping_id[3],$CONTROL_PAR_POS_X,55)
+		set_control_par(%mapping_id[3],$CONTROL_PAR_POS_Y,276)
+		
+		set_control_par(%mapping_id[4],$CONTROL_PAR_POS_X,383)
+		set_control_par(%mapping_id[4],$CONTROL_PAR_POS_Y,208)
+		
+		set_control_par(%mapping_id[5],$CONTROL_PAR_POS_X,399)
+		set_control_par(%mapping_id[5],$CONTROL_PAR_POS_Y,208)
+
+		set_control_par(%mapping_id[6],$CONTROL_PAR_POS_X,418)
+		set_control_par(%mapping_id[6],$CONTROL_PAR_POS_Y,210)
+		
+		set_control_par(%mapping_id[7],$CONTROL_PAR_POS_X,435)
+		set_control_par(%mapping_id[7],$CONTROL_PAR_POS_Y,212)
+		
+		set_control_par(%mapping_id[8],$CONTROL_PAR_POS_X,41)
+		set_control_par(%mapping_id[8],$CONTROL_PAR_POS_Y,315)
+		
+		set_control_par(%mapping_id[9],$CONTROL_PAR_POS_X,339)
+		set_control_par(%mapping_id[9],$CONTROL_PAR_POS_Y,317)
+		
+		set_control_par(%mapping_id[10],$CONTROL_PAR_POS_X,384)
+		set_control_par(%mapping_id[10],$CONTROL_PAR_POS_Y,317)
+		
+		set_control_par(%mapping_id[11],$CONTROL_PAR_POS_X,53)
+		set_control_par(%mapping_id[11],$CONTROL_PAR_POS_Y,265)
+		
+		set_control_par(%mapping_id[12],$CONTROL_PAR_POS_X,53)
+		set_control_par(%mapping_id[12],$CONTROL_PAR_POS_Y,288)
+		
+		set_control_par(%mapping_id[13],$CONTROL_PAR_POS_X,237)
+		set_control_par(%mapping_id[13],$CONTROL_PAR_POS_Y,212)
+		{/Position}
+		
+		{Size}		
+		set_control_par(%mapping_id[0],$CONTROL_PAR_WIDTH,150)
+		
+		set_control_par(%mapping_id[4],$CONTROL_PAR_WIDTH,19)
+		set_control_par(%mapping_id[4],$CONTROL_PAR_HEIGHT,22)
+		
+		set_control_par(%mapping_id[5],$CONTROL_PAR_WIDTH,19)
+		set_control_par(%mapping_id[5],$CONTROL_PAR_HEIGHT,22)
+
+		set_control_par(%mapping_id[6],$CONTROL_PAR_WIDTH,14)
+		set_control_par(%mapping_id[6],$CONTROL_PAR_HEIGHT,14)
+		
+		set_control_par(%mapping_id[7],$CONTROL_PAR_WIDTH,18)
+		set_control_par(%mapping_id[7],$CONTROL_PAR_HEIGHT,18)
+		
+		set_control_par(%mapping_id[8],$CONTROL_PAR_WIDTH,73)
+		set_control_par(%mapping_id[8],$CONTROL_PAR_HEIGHT,30)
+		
+		set_control_par(%mapping_id[9],$CONTROL_PAR_WIDTH,43)
+		set_control_par(%mapping_id[9],$CONTROL_PAR_HEIGHT,30)
+		
+		set_control_par(%mapping_id[10],$CONTROL_PAR_WIDTH,43)
+		set_control_par(%mapping_id[10],$CONTROL_PAR_HEIGHT,30)
+		
+		set_control_par(%mapping_id[11],$CONTROL_PAR_WIDTH,50)
+		set_control_par(%mapping_id[11],$CONTROL_PAR_HEIGHT,13)
+		
+		set_control_par(%mapping_id[12],$CONTROL_PAR_WIDTH,50)
+		set_control_par(%mapping_id[12],$CONTROL_PAR_HEIGHT,13)
+		
+		set_control_par(%mapping_id[13],$CONTROL_PAR_WIDTH,119)
+		set_control_par(%mapping_id[13],$CONTROL_PAR_HEIGHT,13)
+		{/Size}
+		
+		{Pictures}
+		set_control_par_str(%mapping_id[0],$CONTROL_PAR_PICTURE,"NID_options_dropdown_preset")
+		set_control_par_str(%mapping_id[1],$CONTROL_PAR_PICTURE,"v1_2_NID_options_dropdown_instrument_kick")
+		set_control_par_str(%mapping_id[2],$CONTROL_PAR_PICTURE,"v1_2_settings_midi_articulation_dropdown")
+		set_control_par_str(%mapping_id[3],$CONTROL_PAR_PICTURE,"NID_options_slider_C-2-to-G8")
+		set_control_par_str(%mapping_id[4],$CONTROL_PAR_PICTURE,"NID_options_btn_preset_prev")
+		set_control_par_str(%mapping_id[5],$CONTROL_PAR_PICTURE,"NID_options_btn_preset_next")
+		set_control_par_str(%mapping_id[6],$CONTROL_PAR_PICTURE,"NID_options_btn_preset_save")
+		set_control_par_str(%mapping_id[7],$CONTROL_PAR_PICTURE,"NID_options_btn_preset_delete")
+		set_control_par_str(%mapping_id[8],$CONTROL_PAR_PICTURE,"v1_2_NID_options_btn_select_by_midi")
+		set_control_par_str(%mapping_id[9],$CONTROL_PAR_PICTURE,"NID_options_btn_apply_ok")
+		set_control_par_str(%mapping_id[10],$CONTROL_PAR_PICTURE,"NID_options_btn_apply_cancel")
+		set_control_par_str(%mapping_id[11],$CONTROL_PAR_PICTURE,"NID_options_btn_range_up")
+		set_control_par_str(%mapping_id[12],$CONTROL_PAR_PICTURE,"NID_options_btn_range_down")
+		{/Pictures}
+		
+		{Text}
+		set_control_par_str(%mapping_id[4],$CONTROL_PAR_TEXT,"")
+		set_control_par_str(%mapping_id[5],$CONTROL_PAR_TEXT,"")
+		set_control_par_str(%mapping_id[6],$CONTROL_PAR_TEXT,"")
+		set_control_par_str(%mapping_id[7],$CONTROL_PAR_TEXT,"")
+		set_control_par_str(%mapping_id[8],$CONTROL_PAR_TEXT,"")
+		set_control_par_str(%mapping_id[9],$CONTROL_PAR_TEXT,"")
+		set_control_par_str(%mapping_id[10],$CONTROL_PAR_TEXT,"")
+		set_control_par_str(%mapping_id[11],$CONTROL_PAR_TEXT,"")
+		set_control_par_str(%mapping_id[12],$CONTROL_PAR_TEXT,"")
+		{/Text}
+		
+		{Other}
+		set_control_par(%mapping_id[0], $CONTROL_PAR_TEXTPOS_Y, 20)
+		{/Other}		
+		
+		{Persistency}
+		make_persistent($current_mapping_preset)
+		{/Persistency}
+		
+		{Menu Initializations}
+		{$current_mapping_preset}
+		add_menu_item($current_mapping_preset, "Default", 0)
+		add_menu_item($current_mapping_preset, "GM", 1)
+		add_menu_item($current_mapping_preset, "V-Drums TD-12/20", 2)
+		add_menu_item($current_mapping_preset, "V-Drums TD-3/6/8", 3)
+		add_menu_item($current_mapping_preset, "DrumIt Five", 4)
+		add_menu_item($current_mapping_preset, "EZDrummer", 5)
+		add_menu_item($current_mapping_preset, "Superior Drummer", 6)
+		add_menu_item($current_mapping_preset, "BFD", 7)
+		add_menu_item($current_mapping_preset, "iMap", 8)
+		add_menu_item($current_mapping_preset, "Addictive Drums", 9)
+		add_menu_item($current_mapping_preset, "---------", 10)
+		
+		$count_1 := $NUM_FACTORY_PRESETS + 1
+		while ($count_1 < $NUM_FACTORY_PRESETS + $MAX_NUM_USER_PRESETS + 1)
+			add_menu_item($current_mapping_preset, $count_1, $count_1)
+			inc($count_1)
+		end while
+		
+		read_persistent_var(%num_user_presets)
+		read_persistent_var(%user_mapping_data)
+		
+		load_array(%num_user_presets, 1)
+		load_array(%user_mapping_data, 1)
+		load_array(!user_mapping_names, 1)
+		
+		read_persistent_var($current_mapping_preset)
+		
+		$count_1 := 0
+		if (%num_user_presets[0] > 0)
+			while ($count_1 < %num_user_presets[0])
+				set_menu_item_str(%mapping_id[0], $count_1 + $NUM_FACTORY_PRESETS + 1, !user_mapping_names[$count_1])
+				set_menu_item_visibility(%mapping_id[0], $count_1 + $NUM_FACTORY_PRESETS + 1, 1)
+				inc($count_1)
+			end while
+		else
+			if ($current_mapping_preset > $NUM_FACTORY_PRESETS - 1)
+				$current_mapping_preset := $NUM_FACTORY_PRESETS - 1
+			end if
+			set_menu_item_visibility(%mapping_id[0], 10, 0)
+		end if
+		
+		while ($count_1 < $MAX_NUM_USER_PRESETS)
+			set_menu_item_visibility(%mapping_id[0], $count_1 + $NUM_FACTORY_PRESETS + 1, 0)
+			inc($count_1)
+		end while
+		
+		if ($current_mapping_preset < $NUM_FACTORY_PRESETS)
+			set_control_par_str(%mapping_id[7], $CONTROL_PAR_PICTURE, "NID_options_btn_preset_delete_inactive")
+		else
+			set_control_par_str(%mapping_id[7], $CONTROL_PAR_PICTURE, "NID_options_btn_preset_delete")
+		end if
+		
+		@current_preset_name := get_menu_item_str(%mapping_id[0], $current_mapping_preset)
+		{/$current_mapping_preset}
+		
+		{Initial Mapping}
+		$active_key := 36
+		
+		make_persistent(%current_mapping_data)
+		read_persistent_var(%current_mapping_data)
+		
+		$count_1 := 0
+		while ($count_1 < 128)
+			if (%current_mapping_data[$count_1] > -1)
+				%inverse_mapping_data[%current_mapping_data[$count_1]] := $count_1
+			end if
+			inc($count_1)
+		end while
+
+		make_persistent(%inverse_mapping_data)
+		
+		pgs_create_key(MAPPING_DATA, 128)
+		
+		pgs_set_key_val(ACTION_TYPE, 0, -1)
+		$count_1 := 0
+		while ($count_1 < 128)
+			pgs_set_key_val(MAPPING_DATA, $count_1, %inverse_mapping_data[$count_1])
+			inc($count_1)
+		end while
+		pgs_set_key_val(ACTION_TYPE, 0, 6)
+		{/Initial Mapping}
+		
+		{$instruments}				
+		$count_1 := 0
+		while ($count_1 < 20)
+			if (%NUM_DIR_MICS[$count_1] > -1)
+				add_menu_item($instruments, !INSTRUMENT_NAMES[$count_1]  & " ", $count_1)
+			end if
+			inc($count_1)
+		end while
+		
+		add_menu_item($instruments, "(None) ", -1)
+	
+		if (%current_mapping_data[$active_key] > -1 and %KEY_USED[%current_mapping_data[$active_key]] = 1)
+			$instruments := %note_instruments[%current_mapping_data[$active_key]]
+			set_control_par_str(%mapping_id[1], $CONTROL_PAR_PICTURE, !INSTRUMENT_PICS[$instruments])
+		else
+			$instruments := -1
+			set_control_par_str(%mapping_id[1],$CONTROL_PAR_PICTURE,"v1_2_settings_midi_articulation_dropdown")
+		end if
+		{/$instruments}
+		
+		{$articulations}
+		$count_1 := 0
+		while ($count_1 < 17)
+			add_menu_item($articulations, $count_1, $count_1)
+			inc($count_1)
+		end while
+		
+		{if (%current_mapping_data[$active_key] > -1)
+			$instruments := %note_instruments[%current_mapping_data[$active_key]]
+		else
+			$instruments := -1
+		end if
+		
+		set_control_par_str(%mapping_id[1], $CONTROL_PAR_PICTURE, !INSTRUMENT_PICS[$instruments])}
+		
+		$count_1 := 0
+		if ($instruments = -1)
+			set_menu_item_str(%mapping_id[2], $count_1, "(None)" & @ART_MENU_ALIGNMENT_HELPER)
+			set_menu_item_value(%mapping_id[2], $count_1, -1)
+			set_menu_item_visibility(%mapping_id[2], $count_1, 1)
+			$articulations := -1
+			inc($count_1)
+		else
+			$count_2 := %INSTRUMENT_OFFSET[%note_instruments[%current_mapping_data[$active_key]]]
+			while ($count_2 < %INSTRUMENT_OFFSET[%note_instruments[%current_mapping_data[$active_key]] + 1])
+				if (%KEY_USED[$count_2] > 0)
+					set_menu_item_str(%mapping_id[2], $count_1, !ARTICULATION_NAMES[$count_2] & @ART_MENU_ALIGNMENT_HELPER)
+					set_menu_item_value(%mapping_id[2], $count_1, $count_2)
+					set_menu_item_visibility(%mapping_id[2], $count_1, 1)
+					inc($count_1)
+				end if
+				inc($count_2)
+			end while
+			$articulations := %current_mapping_data[$active_key]
+		end if
+		
+		while ($count_1 < 17)
+			set_menu_item_visibility(%mapping_id[2], $count_1, 0)
+			inc($count_1)
+		end while		
+		{/$articulations}
+		{/Menu Initializations}
+		
+		{Default Values}
+		set_control_par(%mapping_id[3], $CONTROL_PAR_DEFAULT_VALUE, 36)
+		{/Default Values}
+		
+		{KEY COLORING}
+		$count_1 := 0
+		while ($count_1 < 128)
+			if (%current_mapping_data[$count_1] > -1 and %KEY_USED[%current_mapping_data[$count_1]] # 0)
+				select (%note_instruments[%current_mapping_data[$count_1]])
+					case $KICK_ID
+						set_key_color($count_1, $KEY_COLOR_RED)
+					case $SNARE_ID
+						set_key_color($count_1, $KEY_COLOR_WARM_YELLOW)
+					case $HH_ID
+						set_key_color($count_1, $KEY_COLOR_CYAN)
+					case $TOM1_ID to $TOM4_ID
+						set_key_color($count_1, $KEY_COLOR_ORANGE)
+					case $CYMB1_ID to $CYMB7_ID
+						set_key_color($count_1, $KEY_COLOR_MINT)
+					case $PERC1_ID to $PERC5_ID
+						set_key_color($count_1, $KEY_COLOR_ORANGE)
+				end select
+				$instruments := %note_instruments[%current_mapping_data[$count_1]]
+				set_key_name($count_1, !inst_visual_names[$instruments] & " " & !artic_visual_name[%FACTORY_MAPPING_DATA[$current_mapping_preset * 128 + $count_1]])
+			else
+				set_key_color($count_1, $KEY_COLOR_INACTIVE)
+				set_key_name($count_1, "")
+			end if
+			inc($count_1)
+		end while		
+	{/Control Group Mapping}
+	
+	{Control Group "Randomize"}
+
+		declare $rand_wait
+
+		{PGS Keys}
+		pgs_create_key(RAND_ON_OFF, 1)
+		pgs_create_key(RAND_VOLUME, 1)
+		pgs_create_key(RAND_TUNING, 1)
+		{/PGS Keys}
+	
+		{Declarations}
+		declare ui_slider $knob_1_randomize (0,150)
+		declare ui_slider $knob_2_randomize (0,70)
+		declare ui_slider $knob_3_randomize (0,65)
+		declare ui_slider $knob_4_randomize (0,200)
+		declare ui_slider $knob_5_randomize (0,700000)
+		declare ui_switch $onoff_randomize
+		{/Declarations}
+		
+		{ui_ids}
+		declare %randomize_id[6]
+		%randomize_id[0] := get_ui_id($onoff_randomize)
+		%randomize_id[1] := get_ui_id($knob_1_randomize)
+		%randomize_id[2] := get_ui_id($knob_2_randomize)
+		%randomize_id[3] := get_ui_id($knob_3_randomize)
+		%randomize_id[4] := get_ui_id($knob_4_randomize)
+		%randomize_id[5] := get_ui_id($knob_5_randomize)
+		{ui_ids}
+		
+		{Position}
+		set_control_par(%randomize_id[0],$CONTROL_PAR_POS_X, 54)
+		set_control_par(%randomize_id[0],$CONTROL_PAR_POS_Y, 443)
+		set_control_par(%randomize_id[1],$CONTROL_PAR_POS_X, 165)
+		set_control_par(%randomize_id[1],$CONTROL_PAR_POS_Y, 449)
+		set_control_par(%randomize_id[2],$CONTROL_PAR_POS_X, 257)
+		set_control_par(%randomize_id[2],$CONTROL_PAR_POS_Y, 449)
+		set_control_par(%randomize_id[3],$CONTROL_PAR_POS_X, 350)
+		set_control_par(%randomize_id[3],$CONTROL_PAR_POS_Y, 449)
+		set_control_par(%randomize_id[4],$CONTROL_PAR_POS_X, 442)
+		set_control_par(%randomize_id[4],$CONTROL_PAR_POS_Y, 449)
+		set_control_par(%randomize_id[5],$CONTROL_PAR_POS_X, 533)
+		set_control_par(%randomize_id[5],$CONTROL_PAR_POS_Y, 449)
+		{/Position}
+		
+		{Size}
+		set_control_par(%randomize_id[0], $CONTROL_PAR_HEIGHT, 50)
+		set_control_par(%randomize_id[0], $CONTROL_PAR_WIDTH, 45)
+		{/Size}
+		
+		{Pictures}
+		set_control_par_str(%randomize_id[0], $CONTROL_PAR_PICTURE, "NID_options_btn_random_on")
+		set_control_par_str(%randomize_id[1],$CONTROL_PAR_PICTURE,"NID_mixer_knb_black91")
+		set_control_par_str(%randomize_id[2],$CONTROL_PAR_PICTURE,"NID_mixer_knb_black91")
+		set_control_par_str(%randomize_id[3],$CONTROL_PAR_PICTURE,"NID_mixer_knb_black91")
+		set_control_par_str(%randomize_id[4],$CONTROL_PAR_PICTURE,"NID_mixer_knb_black91")
+		set_control_par_str(%randomize_id[5],$CONTROL_PAR_PICTURE,"NID_mixer_knb_black91")
+		{/Pictures}
+		
+		{Mouse Behaviour}
+		$count_1 := 1
+		while ($count_1 < 6)
+			set_control_par(%randomize_id[$count_1], $CONTROL_PAR_MOUSE_BEHAVIOUR, -500)
+			inc($count_1)
+		end while
+		{/Mouse Behaviour}
+		
+		{Text}
+		set_control_par_str(%randomize_id[0], $CONTROL_PAR_TEXT,"")
+		{/Text}
+		
+		{Persistency}
+		make_persistent ($onoff_randomize)
+		make_persistent ($knob_1_randomize)
+		make_persistent ($knob_2_randomize)
+		make_persistent ($knob_3_randomize)
+		make_persistent ($knob_4_randomize)
+		make_persistent ($knob_5_randomize)
+		{/Persistency}
+		
+
+		{Help Text}
+		set_control_par_str(%randomize_id[0],$CONTROL_PAR_HELP,"On/Off: Activates/Deactivates the randomizer.")
+		set_control_par_str(%randomize_id[1],$CONTROL_PAR_HELP,"Volume: Randomly changes the volume of each note  (max: -6db to +6 db).")
+		set_control_par_str(%randomize_id[2],$CONTROL_PAR_HELP,"Velocity: Randomly changes the velocity of each note (max: -64 to +64).")
+		set_control_par_str(%randomize_id[3],$CONTROL_PAR_HELP,"Time: Randomly changes the timing of each note (applying a random delay).")
+		set_control_par_str(%randomize_id[4],$CONTROL_PAR_HELP,"Pitch: Randomly detunes each note (max: -100 cent to +100 cent).")
+		set_control_par_str(%randomize_id[5],$CONTROL_PAR_HELP,"Tone: Randomly applies different EQ settings to each note.")
+		{/Help Text}
+		
+		
+		{Automation}
+		set_control_par_str(%randomize_id[0],$CONTROL_PAR_AUTOMATION_NAME,"Randomizer On/Off")
+		set_control_par_str(%randomize_id[1],$CONTROL_PAR_AUTOMATION_NAME,"Volume Randomization")
+		set_control_par_str(%randomize_id[2],$CONTROL_PAR_AUTOMATION_NAME,"Velocity Randomization")
+		set_control_par_str(%randomize_id[3],$CONTROL_PAR_AUTOMATION_NAME,"Time Randomization")
+		set_control_par_str(%randomize_id[4],$CONTROL_PAR_AUTOMATION_NAME,"Pitch Randomization")
+		set_control_par_str(%randomize_id[5],$CONTROL_PAR_AUTOMATION_NAME,"EQ Randomization")
+		{/Automation}
+		
+		{Initialization}
+		read_persistent_var($onoff_randomize)
+		read_persistent_var($knob_1_randomize)
+		read_persistent_var($knob_2_randomize)
+		read_persistent_var($knob_3_randomize)
+		read_persistent_var($knob_4_randomize)
+		read_persistent_var($knob_5_randomize)
+
+		pgs_set_key_val(RAND_VOLUME, 0, $knob_1_randomize)
+		pgs_set_key_val(RAND_TUNING, 0, $knob_4_randomize)
+		pgs_set_key_val(RAND_ON_OFF, 0, $onoff_randomize)
+		
+		set_control_par_str(%randomize_id[1],$CONTROL_PAR_LABEL,($knob_1_randomize * 2 / 3) & "%")
+		set_control_par_str(%randomize_id[2],$CONTROL_PAR_LABEL,($knob_2_randomize * 10 / 7) & "%")
+		set_control_par_str(%randomize_id[3],$CONTROL_PAR_LABEL,($knob_3_randomize * 100 / 65) & "%")
+		set_control_par_str(%randomize_id[4],$CONTROL_PAR_LABEL,($knob_4_randomize / 2) & "%")
+		set_control_par_str(%randomize_id[5],$CONTROL_PAR_LABEL,($knob_5_randomize / 7000) & "%")
+		{/Initialization}
+	{/Control Group "Randomize"}
+end on
+
+function calc_velocity_curve
+	{	variables passed: 	$mode_velocity
+		variables written:	%table[]
+		counters used: 		$count_1}
+
+	select ($mode_velocity)
+		case 0
+			$CShow := 0
+		case 1
+			$CShow := $EXP_SHAPE
+		case 2
+			$CShow := -$EXP_SHAPE
+		case 3
+			$count_1 := 0
+			while ($count_1 <128)
+				%table[$count_1] := $max_velocity
+				inc($count_1)
+			end while
+			exit
+	end select
+	
+	$curve := $CShow
+	$knob_helper := ($curve*(-1) + 1000)
+	$count_1 := 0
+	$helper := 1000
+	$kurven_hoehe := 0
+	while($count_1 < 128)
+		$helper := ($helper * $knob_helper)/1000
+		%curve_deriv[$count_1] := $helper
+		$kurven_hoehe := $kurven_hoehe + %curve_deriv[$count_1]
+		inc($count_1)
+	end while
+	$count_1 := 2
+	%curve_table_helper[0] := 0
+	%curve_table_helper[1] := 0
+	while ($count_1 <128)
+		%curve_table_helper[$count_1] := ((%curve_table_helper[$count_1-1]+%curve_deriv[$count_1]))
+		inc($count_1)
+	end while
+	$count_1 := 0
+	while ($count_1 <128)
+		%curve_form[$count_1] := ((%curve_table_helper[$count_1]*128)/(($kurven_hoehe)/100))
+		inc($count_1)
+	end while
+	$count_1 := 0
+	while ($count_1 <128)
+		%curve_form[$count_1] := (%curve_form[$count_1]*12700)/%curve_form[127]
+		inc($count_1)
+	end while
+	$count_1 := 0
+	while ($count_1 <128)
+		%table[$count_1] := $min_velocity + (((%curve_form[$count_1])*($max_velocity-$min_velocity))/12700)
+		inc($count_1)
+	end while
+end function
+
+function change_min_vel
+	if ($min_velocity > $max_velocity)
+		$min_velocity := $max_velocity
+	end if
+	
+	select ($mode_velocity)
+		case 0 to 2
+			$count_1 := 0
+			while ($count_1 <128)
+				%table[$count_1] := $min_velocity + ((%curve_form[$count_1]*($max_velocity-$min_velocity))/12700)
+				inc($count_1)
+			end while				
+	end select
+end function
+
+function change_max_vel
+	if ($max_velocity < $min_velocity)
+		$max_velocity := $min_velocity
+	end if
+	
+	select ($mode_velocity)
+		case 0 to 2
+			$count_1 := 0
+			while ($count_1 <128)
+				%table[$count_1] := $min_velocity + ((%curve_form[$count_1]*($max_velocity-$min_velocity))/12700)
+				inc($count_1)
+			end while				
+		case 3
+			$count_1 := 0
+			while ($count_1 <128)
+				%table[$count_1] := $max_velocity
+				inc($count_1)
+			end while
+	end select
+end function
+
+function update_mapping_editor_gui
+	if (%current_mapping_data[$active_key] > -1 and %KEY_USED[%current_mapping_data[$active_key]] = 1)
+		$instruments := %note_instruments[%current_mapping_data[$active_key]]
+		set_control_par_str(%mapping_id[1], $CONTROL_PAR_PICTURE, !INSTRUMENT_PICS[$instruments])
+	else
+		$instruments := -1
+		set_control_par_str(%mapping_id[1],$CONTROL_PAR_PICTURE,"v1_2_settings_midi_articulation_dropdown")
+	end if
+	
+	$count_1 := 0
+	if ($instruments = -1)
+		set_menu_item_str(%mapping_id[2], $count_1, "(None)" & @ART_MENU_ALIGNMENT_HELPER)
+		set_menu_item_value(%mapping_id[2], $count_1, -1)
+		set_menu_item_visibility(%mapping_id[2], $count_1, 1)
+		$articulations := -1
+		inc($count_1)
+	else
+		$count_2 := %INSTRUMENT_OFFSET[%note_instruments[%current_mapping_data[$active_key]]]
+		while ($count_2 < %INSTRUMENT_OFFSET[%note_instruments[%current_mapping_data[$active_key]] + 1])
+			if (%KEY_USED[$count_2] > 0)
+				set_menu_item_str(%mapping_id[2], $count_1, !ARTICULATION_NAMES[$count_2] & @ART_MENU_ALIGNMENT_HELPER)
+				set_menu_item_value(%mapping_id[2], $count_1, $count_2)
+				set_menu_item_visibility(%mapping_id[2], $count_1, 1)
+				inc($count_1)
+			end if
+			inc($count_2)
+		end while
+		$articulations := %current_mapping_data[$active_key]
+	end if
+	
+	while ($count_1 < 17)
+		set_menu_item_visibility(%mapping_id[2], $count_1, 0)
+		inc($count_1)
+	end while	
+	
+	$confirm_change := 0
+	$cancel_change := 0
+end function
+
+function update_preset_mn
+	$count_1 := 0
+	if (%num_user_presets[0] > 0)
+		set_menu_item_visibility(%mapping_id[0], $NUM_FACTORY_PRESETS, 1)
+		while ($count_1 < %num_user_presets[0])
+			set_menu_item_str(%mapping_id[0], $count_1 + $NUM_FACTORY_PRESETS + 1, !user_mapping_names[$count_1])
+			set_menu_item_visibility(%mapping_id[0], $count_1 + $NUM_FACTORY_PRESETS + 1, 1)
+			inc($count_1)
+		end while
+	else
+		if ($current_mapping_preset > $NUM_FACTORY_PRESETS - 1)
+			$current_mapping_preset := $NUM_FACTORY_PRESETS - 1
+		end if
+		set_menu_item_visibility(%mapping_id[0], $NUM_FACTORY_PRESETS, 0)
+	end if
+	
+	while ($count_1 < $MAX_NUM_USER_PRESETS)
+		set_menu_item_visibility(%mapping_id[0], $count_1 + $NUM_FACTORY_PRESETS + 1, 0)
+		inc($count_1)
+	end while
+	
+	@current_preset_name := get_menu_item_str(%mapping_id[0], $current_mapping_preset)
+end function
+
+function recall_data
+	$count_1 := 0
+	while ($count_1 < 128)
+		%inverse_mapping_data[$count_1] := -1
+		inc($count_1)
+	end while
+
+	if ($current_mapping_preset > $NUM_FACTORY_PRESETS)
+		$count_1 := 0
+		while ($count_1 < 128)
+			%current_mapping_data[$count_1] := %user_mapping_data[($current_mapping_preset - $NUM_FACTORY_PRESETS - 1) * 128 + $count_1]
+			if (%user_mapping_data[($current_mapping_preset - $NUM_FACTORY_PRESETS - 1) * 128 + $count_1] > -1)
+				%inverse_mapping_data[%user_mapping_data[($current_mapping_preset - $NUM_FACTORY_PRESETS - 1) * 128 + $count_1]] := $count_1
+			end if
+			inc($count_1)
+		end while
+	else
+		$count_1 := 0
+		while ($count_1 < 128)
+			%current_mapping_data[$count_1] := %FACTORY_MAPPING_DATA[$current_mapping_preset * 128 + $count_1]
+			if (%FACTORY_MAPPING_DATA[$current_mapping_preset * 128 + $count_1] > -1)
+				%inverse_mapping_data[%FACTORY_MAPPING_DATA[$current_mapping_preset * 128 + $count_1]] := $count_1
+			end if
+			inc($count_1)
+		end while
+	end if
+	
+	pgs_set_key_val(ACTION_TYPE, 0, -1)
+	$count_1 := 0
+	while ($count_1 < 128)
+		pgs_set_key_val(MAPPING_DATA, $count_1, %inverse_mapping_data[$count_1])
+		inc($count_1)
+	end while
+	pgs_set_key_val(ACTION_TYPE, 0, 6)
+	
+	if ($current_mapping_preset < $NUM_FACTORY_PRESETS)
+		set_control_par_str(%mapping_id[7], $CONTROL_PAR_PICTURE, "NID_options_btn_preset_delete_inactive")
+	else
+		set_control_par_str(%mapping_id[7], $CONTROL_PAR_PICTURE, "NID_options_btn_preset_delete")
+	end if
+	
+	{KEY COLORING}
+	$count_1 := 0
+	while ($count_1 < 128)
+		if (%current_mapping_data[$count_1] > -1 and %KEY_USED[%current_mapping_data[$count_1]] # 0)
+			select (%note_instruments[%current_mapping_data[$count_1]])
+				case $KICK_ID
+					set_key_color($count_1, $KEY_COLOR_RED)
+				case $SNARE_ID
+					set_key_color($count_1, $KEY_COLOR_WARM_YELLOW)
+				case $HH_ID
+					set_key_color($count_1, $KEY_COLOR_CYAN)
+				case $TOM1_ID to $TOM4_ID
+					set_key_color($count_1, $KEY_COLOR_ORANGE)
+				case $CYMB1_ID to $CYMB7_ID
+					set_key_color($count_1, $KEY_COLOR_MINT)
+				case $PERC1_ID to $PERC5_ID
+					set_key_color($count_1, $KEY_COLOR_ORANGE)
+			end select
+			$instruments := %note_instruments[%current_mapping_data[$count_1]]
+			set_key_name($count_1, !inst_visual_names[$instruments] & " " & !artic_visual_name[%FACTORY_MAPPING_DATA[$current_mapping_preset * 128 + $count_1]])
+		else
+			set_key_color($count_1, $KEY_COLOR_INACTIVE)
+			set_key_name($count_1, "")
+		end if
+		inc($count_1)
+	end while		
+end function
+
+function store_data
+	$count_1 := 0
+	while ($count_1 < 128)
+		%user_mapping_data[128 * ($current_mapping_preset - $NUM_FACTORY_PRESETS - 1) + $count_1] := %current_mapping_data[$count_1]
+		inc($count_1)
+	end while
+end function
+
+on note
+	{Select By MIDI}
+	if ($sel_by_midi = 1 and get_event_par($EVENT_ID, $EVENT_PAR_SOURCE) # 0)
+		$active_key := $EVENT_NOTE
+		call update_mapping_editor_gui
+	end if
+	{/Select by MIDI}
+
+	$played_key := $EVENT_NOTE
+	set_key_pressed($played_key, 1)
+
+	{Mapping}
+	if (%current_mapping_data[$EVENT_NOTE] = -1 or %KEY_USED[%current_mapping_data[$EVENT_NOTE]] = 0)
+		ignore_event($EVENT_ID)
+		exit
+	else
+		change_note($EVENT_ID, %current_mapping_data[$EVENT_NOTE])
+	end if
+	{/Mapping}
+
+	{Velocity Curve & Range}
+	change_velo($EVENT_ID, %table[$EVENT_VELOCITY])
+	{/Velocity Curve & Range}
+	
+	{Velocity Randomization}
+	if ($onoff_randomize = 1)
+		$new_vel := $EVENT_VELOCITY + (random (-127,127) * $knob_2_randomize / 200)
+		
+		if ($new_vel > 127)
+			$new_vel := 127
+		end if
+		
+		if ($new_vel < 1)
+			$new_vel := 1
+		end if
+		
+		change_velo($EVENT_ID, $new_vel)
+	end if
+	{/Velocity Randomization}
+	
+	{Time Randomization}
+	if ($onoff_randomize = 1 and $knob_3_randomize > 0)
+		ignore_event ($EVENT_ID)
+		$rand_wait := random(0, $knob_3_randomize * 1000) + 1
+		wait($rand_wait)
+		play_note($EVENT_NOTE, $EVENT_VELOCITY, 0, -1)
+	end if
+	{/Time Randomization}
+end on
+
+on release
+	set_key_pressed($played_key, 0)
+	message("")
+end on
+
+{Velocity Callbacks}
+on ui_control ($linear_velocity)
+	if ($linear_velocity = 0)
+		$linear_velocity := 1
+	else
+		$mode_velocity := 0
+		$exp_1_velocity := 0
+		$exp_2_velocity := 0
+		$fix_velocity := 0
+		call calc_velocity_curve
+	end if
+end on
+
+on ui_control ($exp_1_velocity)
+	if ($exp_1_velocity = 0)
+		$exp_1_velocity := 1
+	else
+		$mode_velocity := 1
+		$linear_velocity := 0
+		$exp_2_velocity := 0
+		$fix_velocity := 0
+		call calc_velocity_curve
+	end if
+end on
+
+on ui_control ($exp_2_velocity)
+	if ($exp_2_velocity = 0)
+		$exp_2_velocity := 1
+	else
+		$mode_velocity := 2
+		$linear_velocity := 0
+		$exp_1_velocity := 0
+		$fix_velocity := 0
+		call calc_velocity_curve
+	end if
+end on
+
+on ui_control ($fix_velocity)
+	if ($fix_velocity = 0)
+		$fix_velocity := 1
+	else
+		$mode_velocity := 3
+		$linear_velocity := 0
+		$exp_1_velocity := 0
+		$exp_2_velocity := 0
+		call calc_velocity_curve
+	end if
+end on
+
+on ui_control ($min_velocity)
+	call change_min_vel
+end on
+
+on ui_control ($max_velocity)
+	call change_max_vel
+end on
+
+on ui_control ($min_vel_up)
+	if ($min_velocity < 127)
+		inc($min_velocity)
+		call change_min_vel
+	end if
+	$min_vel_up := 0
+end on
+
+on ui_control ($min_vel_dn)
+	if ($min_velocity > 1)
+		dec($min_velocity)
+		call change_min_vel
+	end if
+	$min_vel_dn := 0
+end on
+
+on ui_control ($max_vel_up)
+	if ($max_velocity < 127)
+		inc($max_velocity)
+		call change_max_vel
+	end if
+	$max_vel_up := 0
+end on
+
+on ui_control ($max_vel_dn)
+	if ($max_velocity > 1)
+		dec($max_velocity)
+		call change_max_vel
+	end if
+	$max_vel_dn := 0
+end on
+{/Velocity Callbacks}
+
+{kit view callbals}
+on ui_control ($audition)
+	pgs_set_key_val(ACTION_TYPE,0,-1)
+	pgs_set_key_val(AUDITION, 0, $audition)
+end on
+
+on ui_control ($show_triggers)
+	pgs_set_key_val(ACTION_TYPE,0,-1)
+	pgs_set_key_val(SHOW_TRIGGERS, 0, $show_triggers)
+end on
+{/kit view callbals}
+
+{Mapping Callbacks}
+on ui_control (@current_preset_name)
+	$text_change_flag := 1
+end on
+
+on ui_control ($current_mapping_preset)
+	if ($current_mapping_preset = $NUM_FACTORY_PRESETS)
+		$current_mapping_preset := $NUM_FACTORY_PRESETS - 1
+	end if
+
+	@current_preset_name := get_menu_item_str(%mapping_id[0], $current_mapping_preset)
+	call recall_data	
+	call update_mapping_editor_gui
+	$text_change_flag := 0
+end on
+
+on ui_control ($prev_preset)
+	$prev_preset := 0
+
+	if ($current_mapping_preset = 0)
+		if (%num_user_presets[0] = 0)
+			$current_mapping_preset := $NUM_FACTORY_PRESETS - 1
+		else
+			$current_mapping_preset := $NUM_FACTORY_PRESETS + %num_user_presets[0]
+		end if
+	else
+		if ($current_mapping_preset = $NUM_FACTORY_PRESETS + 1)
+			dec($current_mapping_preset)
+		end if
+		dec($current_mapping_preset)
+	end if
+
+	@current_preset_name := get_menu_item_str(%mapping_id[0], $current_mapping_preset)
+	call recall_data
+	call update_mapping_editor_gui
+	$text_change_flag := 0
+end on
+
+on ui_control ($next_preset)
+	$next_preset := 0
+
+	if (($current_mapping_preset = $NUM_FACTORY_PRESETS - 1 and %num_user_presets[0] = 0) or ($current_mapping_preset = $NUM_FACTORY_PRESETS + %num_user_presets[0]))
+		$current_mapping_preset := 0
+	else
+		if ($current_mapping_preset = $NUM_FACTORY_PRESETS - 1)
+			inc($current_mapping_preset)
+		end if
+		inc($current_mapping_preset)
+	end if
+
+	@current_preset_name := get_menu_item_str(%mapping_id[0], $current_mapping_preset)
+	call recall_data
+	call update_mapping_editor_gui
+	$text_change_flag := 0
+end on
+
+on ui_control ($save_preset)
+	if ($text_change_flag = 1 or $current_mapping_preset < $NUM_FACTORY_PRESETS)
+		if (%num_user_presets[0] = $MAX_NUM_USER_PRESETS)
+			message("Out of preset slots!!")
+			wait(500000)
+			message("")
+			exit
+		else
+			$current_mapping_preset := %num_user_presets[0] + $NUM_FACTORY_PRESETS + 1
+			!user_mapping_names[$current_mapping_preset - $NUM_FACTORY_PRESETS - 1] := @current_preset_name
+			inc(%num_user_presets[0])
+			call store_data
+			call update_preset_mn
+			$save_user_mapping_names_id := save_array(!user_mapping_names, 1)
+			$save_user_mapping_data_id := save_array(%user_mapping_data, 1)
+			$save_num_user_presets_id := save_array(%num_user_presets, 1)
+		end if
+	else
+		call store_data
+		$save_user_mapping_data_id := save_array(%user_mapping_data, 1)
+	end if
+	
+	while ($save_user_mapping_names_id # -1 or $save_user_mapping_data_id # -1 or $save_num_user_presets_id # -1)
+		wait(1000)
+	end while
+	
+	set_control_par_str(%mapping_id[7], $CONTROL_PAR_PICTURE, "NID_options_btn_preset_delete")
+	
+	$save_preset := 0
+	$text_change_flag := 0
+end on
+
+on ui_control ($delete_preset)
+	if ($current_mapping_preset < $NUM_FACTORY_PRESETS)
+		exit
+	end if
+
+	if ($current_mapping_preset = $NUM_FACTORY_PRESETS + $MAX_NUM_USER_PRESETS)
+		!user_mapping_names[$MAX_NUM_USER_PRESETS - 1] := ""
+		$count_2 := 0
+		while ($count_2 < 128)
+			%user_mapping_data[128 * ($MAX_NUM_USER_PRESETS - 1) + $count_2] := -1
+			inc($count_2)
+		end while
+	else
+		$count_1 := $current_mapping_preset - $NUM_FACTORY_PRESETS - 1
+		while ($count_1 < %num_user_presets[0])
+			!user_mapping_names[$count_1] := !user_mapping_names[$count_1 + 1]
+			$count_2 := 0
+			while ($count_2 < 128)
+				%user_mapping_data[128 * $count_1 + $count_2] := %user_mapping_data[128 * ($count_1 + 1) + $count_2]
+				inc($count_2)
+			end while
+			inc($count_1)
+		end while
+	end if
+	
+	if ($current_mapping_preset = %num_user_presets[0] + $NUM_FACTORY_PRESETS)
+		dec($current_mapping_preset)
+	end if
+	
+	dec(%num_user_presets[0])
+		
+	$save_user_mapping_names_id := save_array(!user_mapping_names, 1)
+	$save_user_mapping_data_id := save_array(%user_mapping_data, 1)
+	$save_num_user_presets_id := save_array(%num_user_presets, 1)
+	
+	while ($save_user_mapping_names_id # -1 or $save_user_mapping_data_id # -1 or $save_num_user_presets_id # -1)
+		wait(1000)
+	end while
+	
+	call update_preset_mn
+	call recall_data
+	call update_mapping_editor_gui
+	
+	$delete_preset := 0
+	$text_change_flag := 0
+end on
+
+on ui_control ($instruments)
+	if ($instruments > -1)
+		set_control_par_str(%mapping_id[1], $CONTROL_PAR_PICTURE, !INSTRUMENT_PICS[$instruments])
+	else
+		set_control_par_str(%mapping_id[1],$CONTROL_PAR_PICTURE,"v1_2_settings_midi_articulation_dropdown")
+	end if
+
+	$count_1 := 0
+	if ($instruments = -1)
+		set_menu_item_str(%mapping_id[2], $count_1, "(None)" & @ART_MENU_ALIGNMENT_HELPER)
+		set_menu_item_value(%mapping_id[2], $count_1, -1)
+		set_menu_item_visibility(%mapping_id[2], $count_1, 1)
+		$articulations := -1
+		inc($count_1)
+	else
+		$count_2 := %INSTRUMENT_OFFSET[$instruments]
+		while ($count_2 < %INSTRUMENT_OFFSET[$instruments + 1])
+			if (%KEY_USED[$count_2] > 0)
+				set_menu_item_str(%mapping_id[2], $count_1, !ARTICULATION_NAMES[$count_2] & @ART_MENU_ALIGNMENT_HELPER)
+				set_menu_item_value(%mapping_id[2], $count_1, $count_2)
+				set_menu_item_visibility(%mapping_id[2], $count_1, 1)
+				inc($count_1)
+			end if
+			inc($count_2)
+		end while
+		$articulations := %INSTRUMENT_OFFSET[$instruments]
+	end if
+	
+	while ($count_1 < 17)
+		set_menu_item_visibility(%mapping_id[2], $count_1, 0)
+		inc($count_1)
+	end while
+	
+	$confirm_change := 1
+	$cancel_change := 1
+end on
+
+on ui_control ($articulations)
+	$confirm_change := 1
+	$cancel_change := 1
+end on
+
+on ui_control ($confirm_change)
+	if ($confirm_change = 1)
+		$confirm_change := 0
+		exit
+	end if
+	
+	$cancel_change := 0
+	
+	if ($articulations = -1)
+		$count_1 := 0
+		while ($count_1 < 128)
+			if (%current_mapping_data[$count_1] = %current_mapping_data[$active_key])
+				%inverse_mapping_data[%current_mapping_data[$active_key]] := $count_1
+				$count_1 := 128
+			end if
+			inc($count_1)
+		end while
+	else
+		%inverse_mapping_data[$articulations] := $active_key
+	end if
+	%current_mapping_data[$active_key] := $articulations
+	
+	pgs_set_key_val(ACTION_TYPE, 0, -1)
+	pgs_set_key_val(MAPPING_DATA, $articulations, $active_key)
+	pgs_set_key_val(ACTION_TYPE, 0, 6)
+	
+	{KEY COLORING}
+	$count_1 := 0
+	while ($count_1 < 128)
+		if (%current_mapping_data[$count_1] > -1 and %KEY_USED[%current_mapping_data[$count_1]] # 0)
+			select (%note_instruments[%current_mapping_data[$count_1]])
+				case $KICK_ID
+					set_key_color($count_1, $KEY_COLOR_RED)
+				case $SNARE_ID
+					set_key_color($count_1, $KEY_COLOR_WARM_YELLOW)
+				case $HH_ID
+					set_key_color($count_1, $KEY_COLOR_CYAN)
+				case $TOM1_ID to $TOM4_ID
+					set_key_color($count_1, $KEY_COLOR_ORANGE)
+				case $CYMB1_ID to $CYMB7_ID
+					set_key_color($count_1, $KEY_COLOR_MINT)
+				case $PERC1_ID to $PERC5_ID
+					set_key_color($count_1, $KEY_COLOR_ORANGE)
+			end select
+			$instruments := %note_instruments[%current_mapping_data[$count_1]]
+			set_key_name($count_1, !inst_visual_names[$instruments] & " " & !artic_visual_name[%FACTORY_MAPPING_DATA[$current_mapping_preset * 128 + $count_1]])
+		else
+			set_key_color($count_1, $KEY_COLOR_INACTIVE)
+			set_key_name($count_1, "")
+		end if
+		inc($count_1)
+	end while
+	call update_mapping_editor_gui
+end on
+
+on ui_control ($cancel_change)
+	if ($cancel_change = 1)
+		$cancel_change := 0
+		exit
+	end if
+	$confirm_change := 0
+	call update_mapping_editor_gui
+end on
+
+on ui_control ($active_key)
+	$last_callback_id := $NI_CALLBACK_ID
+	wait($KNOB_ADJUSTMENT_TOLERANCE)
+	
+	if ($NI_CALLBACK_ID # $last_callback_id)
+		exit
+	end if
+
+	call update_mapping_editor_gui
+end on
+
+on ui_control ($active_key_up)
+	if ($active_key < 127)
+		inc($active_key)
+		call update_mapping_editor_gui
+	end if
+end on
+
+on ui_control ($active_key_dn)
+	if ($active_key > 0)
+		dec($active_key)
+		call update_mapping_editor_gui
+	end if
+end on
+{/Mapping Callbacks}
+
+{Randomize Callbacks}
+on ui_control ($onoff_randomize)
+	pgs_set_key_val(ACTION_TYPE, 0, -1)
+	pgs_set_key_val(RAND_ON_OFF, 0, $onoff_randomize)
+	
+	if ($onoff_randomize = 1)
+		$count_1 := 0
+		while($count_1 < $NUM_GROUPS)
+			if ($knob_5_randomize = 0)
+				$count_1 := 0
+				while($count_1 < $NUM_GROUPS)
+					set_engine_par($ENGINE_PAR_EFFECT_BYPASS, (($knob_5_randomize + 1) mod 2), $count_1, 3, -1)
+					inc($count_1)
+					wait(1000)
+				end while   
+			else
+				set_engine_par($ENGINE_PAR_EFFECT_BYPASS, 0, $count_1, 3, -1)
+				set_engine_par($ENGINE_PAR_MOD_TARGET_INTENSITY, $knob_5_randomize, $count_1, 18, -1)
+				set_engine_par($ENGINE_PAR_MOD_TARGET_INTENSITY, $knob_5_randomize, $count_1, 19, -1)
+				set_engine_par($ENGINE_PAR_MOD_TARGET_INTENSITY, $knob_5_randomize, $count_1, 20, -1)
+			end if
+			inc($count_1)
+		end while
+	else
+		$count_1 := 0
+		while($count_1 < $NUM_GROUPS)
+			set_engine_par($ENGINE_PAR_EFFECT_BYPASS, (($onoff_randomize + 1) mod 2), $count_1, 3, -1)
+			set_engine_par($ENGINE_PAR_MOD_TARGET_INTENSITY, 0, $count_1, 18, -1)
+			set_engine_par($ENGINE_PAR_MOD_TARGET_INTENSITY, 0, $count_1, 19, -1)
+			set_engine_par($ENGINE_PAR_MOD_TARGET_INTENSITY, 0, $count_1, 20, -1)
+			inc($count_1)
+		end while
+	end if
+end on
+
+on ui_control ($knob_1_randomize)
+	pgs_set_key_val(ACTION_TYPE, 0, -1)
+	pgs_set_key_val(RAND_VOLUME, 0, $knob_1_randomize)
+	set_control_par_str(%randomize_id[1],$CONTROL_PAR_LABEL,($knob_1_randomize * 2 / 3) & "%")
+end on
+
+on ui_control ($knob_2_randomize)
+	set_control_par_str(%randomize_id[2],$CONTROL_PAR_LABEL,($knob_2_randomize * 10 / 7) & "%")
+end on
+
+on ui_control ($knob_3_randomize)
+	set_control_par_str(%randomize_id[3],$CONTROL_PAR_LABEL,($knob_3_randomize * 100 / 65) & "%")
+end on
+
+on ui_control ($knob_4_randomize)
+	pgs_set_key_val(ACTION_TYPE, 0, -1)
+	pgs_set_key_val(RAND_TUNING, 0, $knob_4_randomize)
+	set_control_par_str(%randomize_id[4],$CONTROL_PAR_LABEL,($knob_4_randomize / 2) & "%")
+end on
+
+on ui_control ($knob_5_randomize)
+	if ($onoff_randomize = 1)
+		if ($knob_5_randomize = 0)
+			$count_1 := 0
+			while($count_1 < $NUM_GROUPS)
+				set_engine_par($ENGINE_PAR_EFFECT_BYPASS, (($knob_5_randomize + 1) mod 2), $count_1, 3, -1)
+				inc($count_1)
+				wait(1000)
+			end while   
+		else	
+			$count_1 := 0
+			while($count_1 < $NUM_GROUPS)
+				set_engine_par($ENGINE_PAR_EFFECT_BYPASS, 0, $count_1, 3, -1)
+				set_engine_par($ENGINE_PAR_MOD_TARGET_INTENSITY, $knob_5_randomize, $count_1, find_mod($count_1, "RVB_EQ_FREQ_1"), -1)
+				set_engine_par($ENGINE_PAR_MOD_TARGET_INTENSITY, $knob_5_randomize, $count_1, find_mod($count_1, "RVU_EQ_BW_1"), -1)
+				set_engine_par($ENGINE_PAR_MOD_TARGET_INTENSITY, $knob_5_randomize, $count_1, find_mod($count_1, "RVB_EQ_GAIN_1"), -1)
+				inc($count_1)
+				wait(1000)
+			end while
+		end if
+	end if
+	
+	set_control_par_str(%randomize_id[5],$CONTROL_PAR_LABEL,($knob_5_randomize / 7000) & "%")
+end on
+{/Randomize Callbacks}
+
+on poly_at
+	if (%POLY_AT[$POLY_AT_NUM] = $AT_THRESHOLD)
+		select (%FACTORY_MAPPING_DATA[$current_mapping_preset * 128 + $POLY_AT_NUM])
+			case 71 to 74
+				play_note($CYMB1_CHOKE, 100, 0, 100)
+			case 74 to 78
+				play_note($CYMB2_CHOKE, 100, 0, 100)
+			case 79 to 82
+				play_note($CYMB3_CHOKE, 100, 0, 100)
+			case 83 to 86
+				play_note($CYMB4_CHOKE, 100, 0, 100)
+			case 87 to 90
+				play_note($CYMB5_CHOKE, 100, 0, 100)
+			case 91 to 94
+				play_note($CYMB6_CHOKE, 100, 0, 100)
+			case 95 to 98
+				play_note($CYMB7_CHOKE, 100, 0, 100)
+		end select
+	end if	
+end on
+
+on async_complete
+	if ($NI_ASYNC_ID = $save_user_mapping_data_id)
+		$save_user_mapping_data_id := -1
+	end if
+	if ($NI_ASYNC_ID = $load_user_mapping_data_id)
+		$load_user_mapping_data_id := -1
+	end if
+	if ($NI_ASYNC_ID = $save_user_mapping_names_id)
+		$save_user_mapping_names_id := -1
+	end if
+	if ($NI_ASYNC_ID = $load_user_mapping_names_id)
+		$load_user_mapping_names_id := -1
+	end if
+	if ($NI_ASYNC_ID = $load_num_user_presets_id)
+		$load_num_user_presets_id := -1
+	end if
+	if ($NI_ASYNC_ID = $save_num_user_presets_id)
+		$save_num_user_presets_id := -1
+	end if
+	if($NI_ASYNC_ID = $mixer_preset_load_id_1)
+		$mixer_preset_load_id_1 := -1
+	end if
+	if($NI_ASYNC_ID = $mixer_preset_load_id_2)
+		$mixer_preset_load_id_2 := -1
+	end if
+	if($NI_ASYNC_ID = $mixer_check)
+		if($NI_ASYNC_EXIT_STATUS # 1)
+			while($mixer_init_flag = 1)
+				wait(75)
+			end while
+			%kitc_mixer_userpresets[0] := 0
+			
+			set_menu_item_visibility(%mixer_ui_id[1], $FACTORY_PRESETS, 0)
+			set_menu_item_visibility(%mixer_ui_id[2], $FACTORY_PRESETS, 0)
+		
+			$count := $FACTORY_PRESETS + 1
+			while($count < $FACTORY_PRESETS + 1 + $USER_PRESETS)
+				set_menu_item_visibility(%mixer_ui_id[1], $count, 0)
+				set_menu_item_visibility(%mixer_ui_id[2], $count, 0)
+				inc($count)
+			end while
+		end if		
+	end if
+end on
+
+{Mixer Callbacks}
+on ui_control ($mixer_preset_next)
+	if($mixer_preset_menu = $FACTORY_PRESETS - 1 and %kitc_mixer_userpresets[0] = 0)
+		$mixer_preset_menu := 0
+	else
+		if($mixer_preset_menu = $FACTORY_PRESETS + %kitc_mixer_userpresets[0])
+			$mixer_preset_menu := 0
+		else
+			inc($mixer_preset_menu)
+			if($mixer_preset_menu = $FACTORY_PRESETS)
+				inc($mixer_preset_menu)
+			end if
+		end if
+	end if
+	$last_mixer_preset := $mixer_preset_menu
+	pgs_set_key_val(ACTION_TYPE,0, -1)
+	pgs_set_key_val(MIXER_DATA, 0, 1)
+	pgs_set_key_val(MIXER_DATA, 1, 0)
+	pgs_set_key_val(MIXER_DATA, 2, $mixer_preset_menu)
+	pgs_set_key_val(MIXER_DATA, 4, 0)
+	pgs_set_key_val(ACTION_TYPE,0, 1)
+end on
+
+on ui_control ($mixer_preset_prev)
+	if($mixer_preset_menu = 0)
+		if(%kitc_mixer_userpresets[0] = 0)
+			$mixer_preset_menu := $FACTORY_PRESETS - 1
+		else
+			$mixer_preset_menu := $FACTORY_PRESETS + %kitc_mixer_userpresets[0]
+		end if
+	else
+		dec($mixer_preset_menu)
+		if($mixer_preset_menu = $FACTORY_PRESETS)
+			dec($mixer_preset_menu)
+		end if
+	end if
+	$last_mixer_preset := $mixer_preset_menu
+	pgs_set_key_val(ACTION_TYPE,0, -1)
+	pgs_set_key_val(MIXER_DATA, 0, 1)
+	pgs_set_key_val(MIXER_DATA, 1, 0)
+	pgs_set_key_val(MIXER_DATA, 2, $mixer_preset_menu)
+	pgs_set_key_val(MIXER_DATA, 4, 0)
+	pgs_set_key_val(ACTION_TYPE,0, 1)
+end on
+
+on ui_control ($mixer_preset_menu)
+	if($mixer_preset_menu = $FACTORY_PRESETS)
+		$mixer_preset_menu := $last_mixer_preset
+	else
+		pgs_set_key_val(ACTION_TYPE, 0, -1)
+		pgs_set_key_val(MIXER_DATA, 0, 1)
+		pgs_set_key_val(MIXER_DATA, 1, 0)
+		pgs_set_key_val(MIXER_DATA, 2, $mixer_preset_menu)
+		pgs_set_key_val(MIXER_DATA, 4, 0)
+		pgs_set_key_val(ACTION_TYPE, 0, 1)
+	end if
+	$last_mixer_preset := $mixer_preset_menu
+end on
+
+on ui_control ($mixer_preset_menu_new)
+	if($mixer_preset_menu_new # $FACTORY_PRESETS)
+		pgs_set_key_val(ACTION_TYPE, 0, -1)
+		pgs_set_key_val(MIXER_DATA, 0, 1)
+		pgs_set_key_val(MIXER_DATA, 1, 0)
+		pgs_set_key_val(MIXER_DATA, 2, $mixer_preset_menu_new)
+		pgs_set_key_val(MIXER_DATA, 4, 0)
+		pgs_set_key_val(ACTION_TYPE, 0, 1)
+	end if
+	$mixer_preset_menu := $mixer_preset_menu_new
+	$last_mixer_preset := $mixer_preset_menu
+end on
+{/Mixer Callbacks}
+
+{Groove Callbacks}
+on ui_control ($play)
+	pgs_set_key_val(ACTION_TYPE, 0, -1)
+	pgs_set_key_val(GROOVE_DATA, 0, $play)
+	pgs_set_key_val(GROOVE_DATA, 1, 0)
+	pgs_set_key_val(GROOVE_DATA, 2, 0)
+	pgs_set_key_val(GROOVE_DATA, 3, 0)
+	pgs_set_key_val(ACTION_TYPE, 0, 2)
+	if ($play = 0)
+		$n_counter := 0
+		while ($n_counter < 127)
+			set_key_pressed($n_counter, 0)
+			note_off($ALL_EVENTS)
+			wait(1000)   
+			inc($n_counter)
+		end while
+	end if
+end on
+
+on ui_control ($prev_groove)
+	pgs_set_key_val(ACTION_TYPE, 0, -1)
+	pgs_set_key_val(GROOVE_DATA, 0, -1)
+	pgs_set_key_val(GROOVE_DATA, 1, 1)
+	pgs_set_key_val(GROOVE_DATA, 2, 0)
+	pgs_set_key_val(ACTION_TYPE, 0, 2)
+	$prev_groove := 0
+end on
+
+on ui_control ($next_groove)
+	pgs_set_key_val(ACTION_TYPE, 0, -1)
+	pgs_set_key_val(GROOVE_DATA, 0, -1)
+	pgs_set_key_val(GROOVE_DATA, 1, 0)
+	pgs_set_key_val(GROOVE_DATA, 2, 1)
+	pgs_set_key_val(GROOVE_DATA, 3, 0)
+	pgs_set_key_val(ACTION_TYPE, 0, 2)
+	$next_groove := 0
+end on
+{/Groove Callbacks}
+
+on pgs_changed
+	select (pgs_get_key_val(ACTION_TYPE, 0))
+		case 1
+			if (pgs_get_key_val(MIXER_DATA, 1) # $mixer_preset_flag)
+				$mixer_preset_flag := pgs_get_key_val(MIXER_DATA, 1)
+				if($mixer_preset_flag = 1)
+					set_control_par(%mixer_ui_id[2],$CONTROL_PAR_HIDE,$HIDE_WHOLE_CONTROL)
+					set_control_par(%mixer_ui_id[1],$CONTROL_PAR_HIDE,$HIDE_PART_NOTHING)
+				else
+					set_control_par(%mixer_ui_id[1],$CONTROL_PAR_HIDE,$HIDE_WHOLE_CONTROL)
+					set_control_par(%mixer_ui_id[2],$CONTROL_PAR_HIDE,$HIDE_PART_NOTHING)
+				end if
+			end if
+			if(pgs_get_key_val(MIXER_DATA, 4) = 1)
+				$mixer_preset_load_id_1 := load_array(%kitc_mixer_userpresets,1)
+				$mixer_preset_load_id_2 := load_array(!kitc_mixerpreset_names,1)
+				
+				while ($mixer_preset_load_id_1 # -1 or $mixer_preset_load_id_2 # -1)
+					wait(10)
+				end while
+				
+				if(%kitc_mixer_userpresets[0] = 0)
+					set_menu_item_visibility(%mixer_ui_id[1], $FACTORY_PRESETS, 0)
+					set_menu_item_visibility(%mixer_ui_id[2], $FACTORY_PRESETS, 0)
+				else
+					set_menu_item_visibility(%mixer_ui_id[1], $FACTORY_PRESETS, 1)	
+					set_menu_item_visibility(%mixer_ui_id[2], $FACTORY_PRESETS, 1)	
+				end if
+				
+				$count := $FACTORY_PRESETS + 1
+				while($count < $FACTORY_PRESETS + 1 + $USER_PRESETS)
+					set_menu_item_str(%mixer_ui_id[1], $count, !kitc_mixerpreset_names[$count - $FACTORY_PRESETS - 1])
+					set_menu_item_str(%mixer_ui_id[2], $count, !kitc_mixerpreset_names[$count - $FACTORY_PRESETS - 1])
+					set_menu_item_visibility(%mixer_ui_id[1], $count, 1)
+					set_menu_item_visibility(%mixer_ui_id[2], $count, 1)
+					if($count > $FACTORY_PRESETS + %kitc_mixer_userpresets[0])
+						set_menu_item_visibility(%mixer_ui_id[1], $count, 0)
+						set_menu_item_visibility(%mixer_ui_id[2], $count, 0)
+					end if
+					inc($count)
+				end while
+			end if
+			if (pgs_get_key_val(MIXER_DATA, 2) # -1)
+				$mixer_preset_menu := pgs_get_key_val(MIXER_DATA, 2)
+				$mixer_preset_menu_new := pgs_get_key_val(MIXER_DATA, 2)
+				$last_mixer_preset := $mixer_preset_menu
+			end if
+		case 2
+			if (pgs_get_key_val(GROOVE_DATA, 0) # -1)
+				$play := pgs_get_key_val(GROOVE_DATA, 0)
+			end if
+			set_text($groove_display, pgs_get_str_key_val(GROOVE_NAME))
+	end select
+end on
+
+on persistence_changed
+	if ($init_LOADED = 1)
+		{init callback has been executed, i.e. Master NKI instrument has been loaded from scratch}
+
+	else
+		{init callback has NOT been executed, i.e. snapshot has been loaded}
+		if ($current_mapping_preset = $NUM_FACTORY_PRESETS)
+			$current_mapping_preset := $NUM_FACTORY_PRESETS - 1
+		end if
+
+		@current_preset_name := get_menu_item_str(%mapping_id[0], $current_mapping_preset)
+		call recall_data	
+		call update_mapping_editor_gui
+
+		pgs_set_key_val(ACTION_TYPE,0,-1)
+		pgs_set_key_val(AUDITION, 0, $audition)
+		pgs_set_key_val(SHOW_TRIGGERS, 0, $show_triggers)
+
+		pgs_set_key_val(ACTION_TYPE, 0, -1)
+		$count_1 := 0
+		while ($count_1 < 128)
+			pgs_set_key_val(MAPPING_DATA, $count_1, %inverse_mapping_data[$count_1])
+			inc($count_1)
+		end while
+		pgs_set_key_val(ACTION_TYPE, 0, 6)
+
+		pgs_set_key_val(RAND_VOLUME, 0, $knob_1_randomize)
+		pgs_set_key_val(RAND_TUNING, 0, $knob_4_randomize)
+		pgs_set_key_val(RAND_ON_OFF, 0, $onoff_randomize)
+
+	end if
+	$init_LOADED := 0
+end on

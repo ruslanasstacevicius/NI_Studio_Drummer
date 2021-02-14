@@ -1,0 +1,2589 @@
+{***********************************************
+Native Instruments Drums - Kit B
+Kit Page 1.4
+Author: Native Instruments
+Written by: Dinos Vallianatos
+Modified by: Thanos Kazakos
+Modified: July 16th, 2014
+*************************************************}
+
+on init
+	message("")
+	
+	declare const $LISTENER_RESOL := 2		{in times per beat}	
+	set_listener($NI_SIGNAL_TIMER_BEAT, $LISTENER_RESOL)
+	make_perfview
+	set_ui_height_px(510)
+	set_skin_offset(1206)
+	set_script_title("Kit")
+	
+	declare const $FONT_1_ID := 12
+	declare const $FONT_2_ID := 13
+	
+	declare const $TRIGGER_WAIT_TIME := 100000
+	
+	{debug tools}
+	{declare ui_label $monitor (4, 8)
+	declare @debug}
+	{/debug tools}
+	declare $debug_1
+	declare $debug_2	
+	
+	{helper variables}
+	declare $count_1
+	declare $count_2
+	declare $n_counter
+	declare $prev_instrument
+	declare $loading_flag := 0
+	declare $init_LOADED := 1
+	{/helper variables}
+	
+	declare %instrument_purge_state[20] := (1)
+	declare $active_snare := 0
+	
+	pgs_create_key(INSTRUMENT_PURGE_STATE, 20)
+	pgs_create_key(ACTIVE_SNARE, 1)
+	
+	make_persistent(%instrument_purge_state)
+	make_persistent($active_snare)
+	
+	read_persistent_var(%instrument_purge_state)
+	read_persistent_var($active_snare)	
+		
+	$count_1 := 0
+	pgs_set_key_val(ACTION_TYPE, 0, -1)
+	while ($count_1 < 20)
+		pgs_set_key_val(INSTRUMENT_PURGE_STATE, $count_1, %instrument_purge_state[$count_1])
+		inc($count_1)
+	end while
+	pgs_set_key_val(ACTIVE_SNARE, 0, $active_snare)
+
+	{shared across Options, Kit & Voice Control scripts}
+	declare const $NUM_INSTRUMENTS := 20
+	declare const $MAX_NUM_TOTAL_ART := 126
+	
+	declare const $KICK_ID := 0
+	declare const $SNARE_ID := 1
+	declare const $HH_ID := 2
+	declare const $TOM1_ID := 3
+	declare const $TOM2_ID := 4
+	declare const $TOM3_ID := 5
+	declare const $TOM4_ID := 6
+	declare const $TOM5_ID := 7
+	declare const $CYMB1_ID := 8
+	declare const $CYMB2_ID := 9
+	declare const $CYMB3_ID := 10
+	declare const $CYMB4_ID := 11
+	declare const $CYMB5_ID := 12
+	declare const $CYMB6_ID := 13
+	declare const $CYMB7_ID := 14
+	declare const $PERC1_ID := 15
+	declare const $PERC2_ID := 16
+	declare const $PERC3_ID := 17
+	declare const $PERC4_ID := 18
+	declare const $PERC5_ID := 19
+	declare const $END_ID := 20
+	
+	declare !INSTRUMENT_NAMES[20]
+	!INSTRUMENT_NAMES[$KICK_ID] := "KICK"
+	!INSTRUMENT_NAMES[$SNARE_ID] := "SNARE"
+	!INSTRUMENT_NAMES[$HH_ID] := "HIHAT"
+	!INSTRUMENT_NAMES[$TOM1_ID] := "TOM 1"
+	!INSTRUMENT_NAMES[$TOM2_ID] := "TOM 2"
+	!INSTRUMENT_NAMES[$TOM3_ID] := "TOM 3"
+	!INSTRUMENT_NAMES[$TOM4_ID] := "TOM 4"
+	!INSTRUMENT_NAMES[$TOM5_ID] := "TOM 5"
+	!INSTRUMENT_NAMES[$CYMB1_ID] := "CRASH 1" 	{*}
+	!INSTRUMENT_NAMES[$CYMB2_ID] := "CRASH 2" 	{*}
+	!INSTRUMENT_NAMES[$CYMB3_ID] := "RIDE" 		{*}
+	!INSTRUMENT_NAMES[$CYMB4_ID] := "CHINA" 	{*}
+	!INSTRUMENT_NAMES[$CYMB5_ID] := "SPLASH" 	{*}
+	!INSTRUMENT_NAMES[$CYMB6_ID] := "CYMBAL 6"	{*}
+	!INSTRUMENT_NAMES[$CYMB7_ID] := "CYMBAL 7"	{*}
+	!INSTRUMENT_NAMES[$PERC1_ID] := "STICKS"	{*}
+	!INSTRUMENT_NAMES[$PERC2_ID] := "CLAPS"		{*}
+	!INSTRUMENT_NAMES[$PERC3_ID] := "TAMBOURINE"{*}
+	!INSTRUMENT_NAMES[$PERC4_ID] := "WOODBLOCK"	{*}
+	!INSTRUMENT_NAMES[$PERC5_ID] := "PERC 5"	{*}
+	
+	{constants that are to be set per kit}
+	declare %KEY_USED[128] := (1)			{which notes are used for this kit: 0 -> note is not used
+																				1 -> note is used}
+	%KEY_USED[1] := 0
+	%KEY_USED[3] := 0
+	%KEY_USED[16] := 0
+	%KEY_USED[17] := 0
+	%KEY_USED[18] := 0
+	%KEY_USED[41] := 0
+	%KEY_USED[42] := 0
+	%KEY_USED[48] := 0
+	%KEY_USED[49] := 0
+	%KEY_USED[55] := 0
+	%KEY_USED[56] := 0
+	%KEY_USED[62] := 0
+	%KEY_USED[63] := 0
+	%KEY_USED[64] := 0
+	%KEY_USED[65] := 0
+	%KEY_USED[66] := 0
+	%KEY_USED[67] := 0
+	%KEY_USED[68] := 0
+	%KEY_USED[69] := 0
+	%KEY_USED[70] := 0
+	%KEY_USED[85] := 0
+	%KEY_USED[88] := 0
+	%KEY_USED[89] := 0
+	%KEY_USED[91] := 0
+	%KEY_USED[92] := 0
+	%KEY_USED[93] := 0
+	%KEY_USED[94] := 0
+	%KEY_USED[95] := 0
+	%KEY_USED[96] := 0
+	%KEY_USED[97] := 0
+	%KEY_USED[98] := 0
+	%KEY_USED[104] := 0
+	%KEY_USED[105] := 0
+	%KEY_USED[106] := 0
+	%KEY_USED[107] := 0
+	%KEY_USED[109] := 0
+	%KEY_USED[110] := 0
+	%KEY_USED[112] := 0
+	%KEY_USED[113] := 0
+	%KEY_USED[114] := 0
+	%KEY_USED[115] := 0
+	%KEY_USED[116] := 0
+	%KEY_USED[117] := 0
+	%KEY_USED[118] := 0
+	%KEY_USED[119] := 0
+	%KEY_USED[120] := 0
+	%KEY_USED[121] := 0
+	%KEY_USED[122] := 0
+	%KEY_USED[123] := 0
+	%KEY_USED[124] := 0
+	%KEY_USED[125] := 0
+	%KEY_USED[126] := 0
+	%KEY_USED[127] := 0
+	
+											{max value}
+	declare const $NUM_KIT_MICS := 3			{4}
+	declare const $NUM_SNARE_INSTRUMENTS := 2	{3}
+
+	declare %NUM_DIR_MICS[$NUM_INSTRUMENTS]
+	%NUM_DIR_MICS[$KICK_ID] := 3				{3}
+	%NUM_DIR_MICS[$SNARE_ID] := 2				{2}
+	%NUM_DIR_MICS[$HH_ID] := 1					{1}
+	%NUM_DIR_MICS[$TOM1_ID] := 1				{1}
+	%NUM_DIR_MICS[$TOM2_ID] := 1				{1}
+	%NUM_DIR_MICS[$TOM3_ID] := 1				{1}
+	%NUM_DIR_MICS[$TOM4_ID] := 1				{1}
+	%NUM_DIR_MICS[$TOM5_ID] := -1				{1}
+	%NUM_DIR_MICS[$CYMB1_ID] := 0				{0}
+	%NUM_DIR_MICS[$CYMB2_ID] := 0				{0}
+	%NUM_DIR_MICS[$CYMB3_ID] := 0				{0}
+	%NUM_DIR_MICS[$CYMB4_ID] := 0				{0}
+	%NUM_DIR_MICS[$CYMB5_ID] := 0				{0}
+	%NUM_DIR_MICS[$CYMB6_ID] := -1				{0}
+	%NUM_DIR_MICS[$CYMB7_ID] := -1				{0}
+	%NUM_DIR_MICS[$PERC1_ID] := 0				{1}
+	%NUM_DIR_MICS[$PERC2_ID] := 0				{1}
+	%NUM_DIR_MICS[$PERC3_ID] := 1				{1}
+	%NUM_DIR_MICS[$PERC4_ID] := 1				{1}
+	%NUM_DIR_MICS[$PERC5_ID] := -1				{1}
+	
+	declare %NUM_ART[$NUM_INSTRUMENTS]
+	%NUM_ART[$KICK_ID] := 2						{4}
+	%NUM_ART[$SNARE_ID] := 12					{15}
+	%NUM_ART[$HH_ID] := 17						{17}
+	%NUM_ART[$TOM1_ID] := 5						{6}
+	%NUM_ART[$TOM2_ID] := 5						{6}
+	%NUM_ART[$TOM3_ID] := 5						{6}
+	%NUM_ART[$TOM4_ID] := 5						{6}
+	%NUM_ART[$TOM5_ID] := 0						{6}
+	%NUM_ART[$CYMB1_ID] := 4					{4}
+	%NUM_ART[$CYMB2_ID] := 4					{4}
+	%NUM_ART[$CYMB3_ID] := 4					{4}
+	%NUM_ART[$CYMB4_ID] := 3					{4}
+	%NUM_ART[$CYMB5_ID] := 2					{4}
+	%NUM_ART[$CYMB6_ID] := 0					{4}
+	%NUM_ART[$CYMB7_ID] := 0					{4}
+	%NUM_ART[$PERC1_ID] := 1					{3}
+	%NUM_ART[$PERC2_ID] := 2					{3}
+	%NUM_ART[$PERC3_ID] := 2					{3}
+	%NUM_ART[$PERC4_ID] := 2					{3}
+	%NUM_ART[$PERC5_ID] := 0					{3}
+	{/constants that are to be set per kit}
+	
+	{the MIDI note the first articulation each one of the instruments is mapped to - according to the technical mapping}
+	declare %INSTRUMENT_OFFSET[$NUM_INSTRUMENTS + 1] := (-1)
+	%INSTRUMENT_OFFSET[$KICK_ID] := 0
+	%INSTRUMENT_OFFSET[$SNARE_ID] := 4
+	%INSTRUMENT_OFFSET[$HH_ID] := 19
+	%INSTRUMENT_OFFSET[$TOM1_ID] := 36
+	%INSTRUMENT_OFFSET[$TOM2_ID] := 43
+	%INSTRUMENT_OFFSET[$TOM3_ID] := 50
+	%INSTRUMENT_OFFSET[$TOM4_ID] := 57
+	%INSTRUMENT_OFFSET[$TOM5_ID] := 64
+	%INSTRUMENT_OFFSET[$CYMB1_ID] := 71
+	%INSTRUMENT_OFFSET[$CYMB2_ID] := 75
+	%INSTRUMENT_OFFSET[$CYMB3_ID] := 79
+	%INSTRUMENT_OFFSET[$CYMB4_ID] := 83
+	%INSTRUMENT_OFFSET[$CYMB5_ID] := 87
+	%INSTRUMENT_OFFSET[$CYMB6_ID] := 91
+	%INSTRUMENT_OFFSET[$CYMB7_ID] := 95
+	%INSTRUMENT_OFFSET[$PERC1_ID] := 99
+	
+	{constants that are to be set per kit}
+	%INSTRUMENT_OFFSET[$PERC2_ID] := 100
+	%INSTRUMENT_OFFSET[$PERC3_ID] := 102
+	%INSTRUMENT_OFFSET[$PERC4_ID] := 108
+	%INSTRUMENT_OFFSET[$PERC5_ID] := 112
+	%INSTRUMENT_OFFSET[$END_ID] := 112
+	{/constants that are to be set per kit}
+	
+	{Group Lists per Articulation
+	-----------------------------
+	The number of the row is the note number the articulation is assigned to (refer to the technical mapping document).
+	
+	meaning of columns:
+	#1: Group index of the 1st Direct mic of the articulation
+	#2: Group index of the 2nd Direct mic of the articulation
+	#3: Group index of the 3rd Direct mic of the articulation
+	#4: Group index of the Snare Bleed of the articulation
+	#5: Group index of the 1st Kit mic of the articulation
+	#6: Group index of the 2nd Kit mic of the articulation
+	#7: Group index of the 3rd Kit mic of the articulation
+	#8: Group index of the 4th Kit mic of the articulation	
+	
+	Note: 	If a certain mic type is not available (eg, Snare Bleed for the snare hits), 
+			-1 is going	to be used in the respective column.}
+
+	declare %GROUP_DATA[$MAX_NUM_TOTAL_ART * 8] := (...
+			{KICK}		{0}		0, 10, 13, 14, 19, 36, 53, -1,...
+						{1}	   -1, -1, -1, -1, -1, -1, -1, -1,...
+						{2}	    0, 10, 13, 14, 19, 36, 53, -1,...
+						{3}	   -1, -1, -1, -1, -1, -1, -1, -1,...
+			{SNARE 1}	{4}		1, 11, -1, -1, 20, 37, 54, -1,...
+						{5}		1, 11, -1, -1, 20, 37, 54, -1,...
+						{6}		1, 11, -1, -1, 20, 37, 54, -1,...
+						{7}		1, 11, -1, -1, 20, 37, 54, -1,...
+						{8}		1, 11, -1, -1, 20, 37, 54, -1,...
+						{9}		1, 11, -1, -1, 20, 37, 54, -1,...
+						{10}	1, 11, -1, -1, 20, 37, 54, -1,...
+						{11}	1, 11, -1, -1, 20, 37, 54, -1,...
+						{12}	1, 11, -1, -1, 20, 37, 54, -1,...
+						{13}	1, 11, -1, -1, 20, 37, 54, -1,...
+						{14}	1, 11, -1, -1, 20, 37, 54, -1,...
+						{15}	1, 11, -1, -1, 20, 37, 54, -1,...
+						{16}   -1, -1, -1, -1, -1, -1, -1, -1,...
+						{17}   -1, -1, -1, -1, -1, -1, -1, -1,...
+						{18}   -1, -1, -1, -1, -1, -1, -1, -1,...
+			{HI-HAT}	{19}	3, -1, -1, -1, 22, 39, 56, -1,...
+						{20}	3, -1, -1, -1, 22, 39, 56, -1,...
+						{21}	3, -1, -1, -1, 22, 39, 56, -1,...
+						{22}	3, -1, -1, -1, 22, 39, 56, -1,...
+						{23}	3, -1, -1, -1, 22, 39, 56, -1,...
+						{24}	3, -1, -1, -1, 22, 39, 56, -1,...
+						{25}	3, -1, -1, -1, 22, 39, 56, -1,...
+						{26}	3, -1, -1, -1, 22, 39, 56, -1,...
+						{17}	3, -1, -1, -1, 22, 39, 56, -1,...
+						{28}	3, -1, -1, -1, 22, 39, 56, -1,...
+						{29}	3, -1, -1, -1, 22, 39, 56, -1,...
+						{30}	3, -1, -1, -1, 22, 39, 56, -1,...
+						{31}	3, -1, -1, -1, 22, 39, 56, -1,...
+						{32}	3, -1, -1, -1, 22, 39, 56, -1,...
+						{33}	3, -1, -1, -1, 22, 39, 56, -1,...
+						{34}	3, -1, -1, -1, 22, 39, 56, -1,...
+						{35}	3, -1, -1, -1, 22, 39, 56, -1,...
+			{TOM 1}		{36}	4, -1, -1, 15, 23, 40, 57, -1,...
+						{37}	4, -1, -1, 15, 23, 40, 57, -1,...
+						{38}	4, -1, -1, 15, 23, 40, 57, -1,...
+						{39}	4, -1, -1, 15, 23, 40, 57, -1,...
+						{40}	4, -1, -1, 15, 23, 40, 57, -1,...
+						{41}   -1, -1, -1, -1, -1, -1, -1, -1,...
+						{42}   -1, -1, -1, -1, -1, -1, -1, -1,...
+			{TOM 2}		{43}	5, -1, -1, 16, 24, 41, 58, -1,...
+						{44}	5, -1, -1, 16, 24, 41, 58, -1,...
+						{45}	5, -1, -1, 16, 24, 41, 58, -1,...
+						{46}	5, -1, -1, 16, 24, 41, 58, -1,...
+						{47}	5, -1, -1, 16, 24, 41, 58, -1,...
+						{48}   -1, -1, -1, -1, -1, -1, -1, -1,...
+						{49}   -1, -1, -1, -1, -1, -1, -1, -1,...
+			{TOM 3}		{50}	6, -1, -1, 17, 25, 42, 59, -1,...
+						{51}	6, -1, -1, 17, 25, 42, 59, -1,...
+						{52}	6, -1, -1, 17, 25, 42, 59, -1,...
+						{53}	6, -1, -1, 17, 25, 42, 59, -1,...
+						{54}	6, -1, -1, 17, 25, 42, 59, -1,...
+						{55}   -1, -1, -1, -1, -1, -1, -1, -1,...
+						{56}   -1, -1, -1, -1, -1, -1, -1, -1,...
+			{TOM 4}		{57}    7, -1, -1, 18, 26, 43, 60, -1,...
+						{58}    7, -1, -1, 18, 26, 43, 60, -1,...
+						{59}    7, -1, -1, 18, 26, 43, 60, -1,...
+						{60}    7, -1, -1, 18, 26, 43, 60, -1,...
+						{61}    7, -1, -1, 18, 26, 43, 60, -1,...
+						{62}   -1, -1, -1, -1, -1, -1, -1, -1,...
+						{63}   -1, -1, -1, -1, -1, -1, -1, -1,...
+			{TOM 5}		{64}   -1, -1, -1, -1, -1, -1, -1, -1,...
+						{65}   -1, -1, -1, -1, -1, -1, -1, -1,...
+						{66}   -1, -1, -1, -1, -1, -1, -1, -1,...
+						{67}   -1, -1, -1, -1, -1, -1, -1, -1,...
+						{68}   -1, -1, -1, -1, -1, -1, -1, -1,...
+						{69}   -1, -1, -1, -1, -1, -1, -1, -1,...
+						{70}   -1, -1, -1, -1, -1, -1, -1, -1,...
+			{CYMBAL 1}	{71}   -1, -1, -1, -1, 27, 44, 61, -1,...
+						{72}   -1, -1, -1, -1, 27, 44, 61, -1,...
+						{73}   -1, -1, -1, -1, 27, 44, 61, -1,...
+						{74}   -1, -1, -1, -1, 27, 44, 61, -1,...
+			{CYMBAL 2}	{75}   -1, -1, -1, -1, 28, 45, 62, -1,...
+						{76}   -1, -1, -1, -1, 28, 45, 62, -1,...
+						{77}   -1, -1, -1, -1, 28, 45, 62, -1,...
+						{78}   -1, -1, -1, -1, 28, 45, 62, -1,...
+			{CYMBAL 3}	{79}   -1, -1, -1, -1, 29, 46, 63, -1,...
+						{80}   -1, -1, -1, -1, 29, 46, 63, -1,...
+						{81}   -1, -1, -1, -1, 29, 46, 63, -1,...
+						{82}   -1, -1, -1, -1, 29, 46, 63, -1,...
+			{CYMBAL 4}	{83}   -1, -1, -1, -1, 30, 47, 64, -1,...
+						{84}   -1, -1, -1, -1, 30, 47, 64, -1,...
+						{85}   -1, -1, -1, -1, -1, -1, -1, -1,...
+						{86}   -1, -1, -1, -1, 30, 47, 64, -1,...
+			{CYMBAL 5}	{87}   -1, -1, -1, -1, 31, 48, 65, -1,...
+						{88}   -1, -1, -1, -1, -1, -1, -1, -1,...
+						{89}   -1, -1, -1, -1, -1, -1, -1, -1,...
+						{90}   -1, -1, -1, -1, 31, 48, 65, -1,...
+			{CYMBAL 6}	{91}   -1, -1, -1, -1, -1, -1, -1, -1,...
+						{92}   -1, -1, -1, -1, -1, -1, -1, -1,...
+						{93}   -1, -1, -1, -1, -1, -1, -1, -1,...
+						{94}   -1, -1, -1, -1, -1, -1, -1, -1,...
+			{CYMBAL 7}	{95}   -1, -1, -1, -1, -1, -1, -1, -1,...
+						{96}   -1, -1, -1, -1, -1, -1, -1, -1,...
+						{97}   -1, -1, -1, -1, -1, -1, -1, -1,...
+						{98}   -1, -1, -1, -1, -1, -1, -1, -1,...
+			{PERC 1}	{99}   -1, -1, -1, -1, 32, 49, 66, -1,...
+			{PERC 2}	{100}  -1, -1, -1, -1, 33, 50, 67, -1,...
+						{101}  -1, -1, -1, -1, 33, 50, 67, -1,...
+			{PERC 3}	{102}   8, -1, -1, -1, 34, 51, 68, -1,...
+						{103}   8, -1, -1, -1, 34, 51, 68, -1,...
+						{104}  -1, -1, -1, -1, -1, -1, -1, -1,...
+						{105}  -1, -1, -1, -1, -1, -1, -1, -1,...
+						{106}  -1, -1, -1, -1, -1, -1, -1, -1,...
+						{107}  -1, -1, -1, -1, -1, -1, -1, -1,...
+			{PERC 4}	{108}   9, -1, -1, -1, 35, 52, 69, -1,...
+						{109}  -1, -1, -1, -1, -1, -1, -1, -1,...
+						{110}  -1, -1, -1, -1, -1, -1, -1, -1,...
+						{111}   9, -1, -1, -1, 35, 52, 69, -1,...
+						{112}  -1, -1, -1, -1, -1, -1, -1, -1,...
+			{PERC 5}	{113}  -1, -1, -1, -1, -1, -1, -1, -1,...
+						{114}  -1, -1, -1, -1, -1, -1, -1, -1,...
+						{115}  -1, -1, -1, -1, -1, -1, -1, -1,...
+						{116}  -1, -1, -1, -1, -1, -1, -1, -1,...
+						{117}  -1, -1, -1, -1, -1, -1, -1, -1,...
+						{118}  -1, -1, -1, -1, -1, -1, -1, -1,...
+						{119}  -1, -1, -1, -1, -1, -1, -1, -1,...
+						{120}  -1, -1, -1, -1, -1, -1, -1, -1,...
+						{121}  -1, -1, -1, -1, -1, -1, -1, -1,...
+						{122}  -1, -1, -1, -1, -1, -1, -1, -1,...
+						{123}  -1, -1, -1, -1, -1, -1, -1, -1,...
+						{124}  -1, -1, -1, -1, -1, -1, -1, -1,...
+						{125}  -1, -1, -1, -1, -1, -1, -1, -1)
+	
+	{CHOKE KEYS - if these notes are played, all events of their associated group will be faded}
+	declare const $CYMB1_CHOKE := 74
+	declare const $CYMB2_CHOKE := 78
+	declare const $CYMB3_CHOKE := 82
+	declare const $CYMB4_CHOKE := 86
+	declare const $CYMB5_CHOKE := 90
+	declare const $CYMB6_CHOKE := 94
+	declare const $CYMB7_CHOKE := 98
+	
+	{Instruments per note}
+	declare %note_instruments[128] := (-1) {which key belongs to which instrument}
+	$count_1 := 0
+	$count_2 := 0
+	while ($count_1 < %INSTRUMENT_OFFSET[$END_ID])
+		if ($count_1 >= %INSTRUMENT_OFFSET[$count_2 + 1])
+			inc($count_2)
+		end if
+		%note_instruments[$count_1] := $count_2
+		inc($count_1)
+	end while
+	{/shared across Options, Kit & Voice Control scripts}
+	
+	{Instrument Mixer Channels
+	The direct channels of each one of the instruments, according to the CHANNEL_PURGE_STATE PGS key created in the mixer page
+	to be set per kit}
+	declare %instr_channel[$NUM_INSTRUMENTS]
+	%instr_channel[$KICK_ID] := 0
+	%instr_channel[$SNARE_ID] := 1
+	%instr_channel[$HH_ID] := 2
+	%instr_channel[$TOM1_ID] := 3
+	%instr_channel[$TOM2_ID] := 4
+	%instr_channel[$TOM3_ID] := 5
+	%instr_channel[$TOM4_ID] := 6
+	%instr_channel[$TOM5_ID] := -1
+	%instr_channel[$CYMB1_ID] := -1
+	%instr_channel[$CYMB2_ID] := -1
+	%instr_channel[$CYMB3_ID] := -1
+	%instr_channel[$CYMB4_ID] := -1
+	%instr_channel[$CYMB5_ID] := -1
+	%instr_channel[$CYMB6_ID] := -1
+	%instr_channel[$CYMB7_ID] := -1
+	%instr_channel[$PERC1_ID] := -1
+	%instr_channel[$PERC2_ID] := -1
+	%instr_channel[$PERC3_ID] := 7
+	%instr_channel[$PERC4_ID] := 8
+	%instr_channel[$PERC5_ID] := -1
+	{/Instrument Mixer Channels}
+	
+	declare !INSTRUMENT_PICS[20]
+	!INSTRUMENT_PICS[$KICK_ID] := "NID_kit_dropdown_instrument_kick"
+	!INSTRUMENT_PICS[$SNARE_ID] := "NID_kit_dropdown_instrument_snare"
+	!INSTRUMENT_PICS[$HH_ID] := "NID_kit_dropdown_instrument_hihat"
+	!INSTRUMENT_PICS[$TOM1_ID] := "NID_kit_dropdown_instrument_tom"
+	!INSTRUMENT_PICS[$TOM2_ID] := "NID_kit_dropdown_instrument_tom"
+	!INSTRUMENT_PICS[$TOM3_ID] := "NID_kit_dropdown_instrument_tom"
+	!INSTRUMENT_PICS[$TOM4_ID] := "NID_kit_dropdown_instrument_tom"
+	!INSTRUMENT_PICS[$TOM5_ID] := "NID_kit_dropdown_instrument_tom"
+	!INSTRUMENT_PICS[$CYMB1_ID] := "NID_kit_dropdown_instrument_crash" 	{*}
+	!INSTRUMENT_PICS[$CYMB2_ID] := "NID_kit_dropdown_instrument_crash" 	{*}
+	!INSTRUMENT_PICS[$CYMB3_ID] := "NID_kit_dropdown_instrument_ride" 		{*}
+	!INSTRUMENT_PICS[$CYMB4_ID] := "NID_kit_dropdown_instrument_china" 	{*}
+	!INSTRUMENT_PICS[$CYMB5_ID] := "NID_kit_dropdown_instrument_splash" 	{*}
+	!INSTRUMENT_PICS[$CYMB6_ID] := "CYMBAL 6"	{*}
+	!INSTRUMENT_PICS[$CYMB7_ID] := "CYMBAL 7"	{*}
+	!INSTRUMENT_PICS[$PERC1_ID] := "NID_kit_dropdown_instrument_sticks"	{*}
+	!INSTRUMENT_PICS[$PERC2_ID] := "NID_kit_dropdown_instrument_clap"		{*}
+	!INSTRUMENT_PICS[$PERC3_ID] := "NID_kit_dropdown_instrument_tambourine"{*}
+	!INSTRUMENT_PICS[$PERC4_ID] := "NID_kit_dropdown_instrument_woodblock"	{*}
+	!INSTRUMENT_PICS[$PERC5_ID] := "PERC 5"	{*}
+	
+	{$count_1 := 0
+	while ($count_1 < $MAX_NUM_TOTAL_ART)
+		add_text_line($monitor, $count_1 & "    " & %GROUP_DATA[$count_1 * 8 + 0] & "   " & %GROUP_DATA[$count_1 * 8 + 1] & "   " & %GROUP_DATA[$count_1 * 8 + 2] & "   " &...
+									%GROUP_DATA[$count_1 * 8 + 3] & "   " & %GROUP_DATA[$count_1 * 8 + 4] & "   " & %GROUP_DATA[$count_1 * 8 + 5] & "   " &...
+											%GROUP_DATA[$count_1 * 8 + 6] & "   " & %GROUP_DATA[$count_1 * 8 + 7])
+		inc($count_1)
+	end while}
+	
+	{Control Group "Mixer"}
+		declare $count
+		declare $mixer_preset_flag
+		make_persistent($mixer_preset_flag)
+		read_persistent_var($mixer_preset_flag)
+		declare $mixer_init_flag := 1
+		
+		{declarations}
+		declare ui_menu $mixer_preset_menu_new
+		declare ui_menu $mixer_preset_menu
+		declare ui_button $mixer_preset_prev
+		declare ui_button $mixer_preset_next
+		{/declarations}
+		
+		{mixer_ui_ids}
+		declare %mixer_ui_id[5]
+		{cell 0 is empty for kludge reasons}
+		%mixer_ui_id[1] := get_ui_id($mixer_preset_menu_new)
+		%mixer_ui_id[2] := get_ui_id($mixer_preset_menu)
+		%mixer_ui_id[3] := get_ui_id($mixer_preset_prev)
+		%mixer_ui_id[4] := get_ui_id($mixer_preset_next)
+		{/mixer_ui_ids}
+		
+		{Pictures}
+		set_control_par_str(%mixer_ui_id[1],$CONTROL_PAR_PICTURE,"NID_header_dropdown_newpreset")
+		set_control_par_str(%mixer_ui_id[2],$CONTROL_PAR_PICTURE,"NID_header_dropdown_preset")
+		set_control_par_str(%mixer_ui_id[3],$CONTROL_PAR_PICTURE,"NID_header_btn_prev")
+		set_control_par_str(%mixer_ui_id[4],$CONTROL_PAR_PICTURE,"NID_header_btn_next")
+		{/Pictures}
+		
+		{help}
+		set_control_par_str(%mixer_ui_id[1],$CONTROL_PAR_HELP,"Mixer Preset Menu: Selects and loads settings for the whole mixer.")
+		set_control_par_str(%mixer_ui_id[2],$CONTROL_PAR_HELP,"Mixer Preset Menu: Selects and loads settings for the whole mixer.")
+		set_control_par_str(%mixer_ui_id[3],$CONTROL_PAR_HELP,"Previous Mixer Preset: Selects and loads settings for the whole mixer from the preset that is located before this one in the mixer preset menu.")
+		set_control_par_str(%mixer_ui_id[4],$CONTROL_PAR_HELP,"Next Mixer Preset: Selects and loads settings for the whole mixer from the preset that is located after this one in the mixer preset menu.")
+		{/help}
+		
+		{Font IDs & Text Position}
+		set_control_par(%mixer_ui_id[1], $CONTROL_PAR_FONT_TYPE,14)
+		set_control_par(%mixer_ui_id[1], $CONTROL_PAR_TEXTPOS_Y,30)
+		set_control_par(%mixer_ui_id[2], $CONTROL_PAR_FONT_TYPE,14)
+		set_control_par(%mixer_ui_id[2], $CONTROL_PAR_TEXTPOS_Y,4)
+		{/Font IDs & Text Position}
+
+		{Position}
+		move_control_px($mixer_preset_menu_new,10,28)
+		move_control_px($mixer_preset_menu,10,28)
+		move_control_px($mixer_preset_prev,139,13)
+		move_control_px($mixer_preset_next,155,13)
+		{/Position}
+		
+		{Size}
+		
+		set_control_par(%mixer_ui_id[1],$CONTROL_PAR_WIDTH,162)
+		set_control_par(%mixer_ui_id[1],$CONTROL_PAR_HEIGHT,21)
+		
+		set_control_par(%mixer_ui_id[2],$CONTROL_PAR_WIDTH,162)
+		set_control_par(%mixer_ui_id[2],$CONTROL_PAR_HEIGHT,21)
+		
+		set_control_par(%mixer_ui_id[3],$CONTROL_PAR_WIDTH,21)
+		set_control_par(%mixer_ui_id[3],$CONTROL_PAR_HEIGHT,21)
+		
+		set_control_par(%mixer_ui_id[4],$CONTROL_PAR_WIDTH,21)
+		set_control_par(%mixer_ui_id[4],$CONTROL_PAR_HEIGHT,21)
+		{/Size}
+		
+		{Text}
+		set_control_par_str(%mixer_ui_id[3],$CONTROL_PAR_TEXT,"")
+		set_control_par_str(%mixer_ui_id[4],$CONTROL_PAR_TEXT,"")
+		{/Text}
+	
+		{Populate Menu & Information}
+		
+		declare const $FACTORY_PRESETS := 12
+		declare const $USER_PRESETS := 30
+		
+		declare !fact_mixerpreset_names[$FACTORY_PRESETS]
+		!fact_mixerpreset_names[0] := "Pop"
+		!fact_mixerpreset_names[1] := "Funk"
+		!fact_mixerpreset_names[2] := "Jazz"
+		!fact_mixerpreset_names[3] := "Hard Rock"
+		!fact_mixerpreset_names[4] := "Metal"
+		!fact_mixerpreset_names[5] := "Blues & Country"
+		!fact_mixerpreset_names[6] := "Blues Rock"
+		!fact_mixerpreset_names[7] := "Ballad"
+		!fact_mixerpreset_names[8] := "Indie Rock"
+		!fact_mixerpreset_names[9] := "Indie Disco"
+		!fact_mixerpreset_names[10] := "Punk Rock"
+		!fact_mixerpreset_names[11] := "INIT"
+		
+		declare $mixer_check
+		
+		declare %kitb_mixer_userpresets[1]
+		read_persistent_var(%kitb_mixer_userpresets)
+		$mixer_check := load_array(%kitb_mixer_userpresets,1)
+		
+		declare !kitb_mixerpreset_names[$USER_PRESETS]		
+		load_array(!kitb_mixerpreset_names,1)
+	
+		$count := 0
+		while($count < $FACTORY_PRESETS)
+			add_menu_item($mixer_preset_menu_new,!fact_mixerpreset_names[$count],$count)
+			add_menu_item($mixer_preset_menu,!fact_mixerpreset_names[$count],$count)
+			inc($count)
+		end while
+		
+		add_menu_item($mixer_preset_menu_new,"---------",$FACTORY_PRESETS)
+		add_menu_item($mixer_preset_menu,"---------",$FACTORY_PRESETS)
+		if(%kitb_mixer_userpresets[0] = 0)
+			set_menu_item_visibility(%mixer_ui_id[1], $FACTORY_PRESETS, 0)
+			set_menu_item_visibility(%mixer_ui_id[2], $FACTORY_PRESETS, 0)
+		else
+			set_menu_item_visibility(%mixer_ui_id[1], $FACTORY_PRESETS, 1)	
+			set_menu_item_visibility(%mixer_ui_id[2], $FACTORY_PRESETS, 1)	
+		end if
+		
+		$count := $FACTORY_PRESETS + 1
+		while($count < $FACTORY_PRESETS + 1 + $USER_PRESETS)
+			add_menu_item($mixer_preset_menu,!kitb_mixerpreset_names[$count - $FACTORY_PRESETS - 1],$count)
+			add_menu_item($mixer_preset_menu_new,!kitb_mixerpreset_names[$count - $FACTORY_PRESETS - 1],$count)
+			if($count > $FACTORY_PRESETS + %kitb_mixer_userpresets[0])
+				set_menu_item_visibility(%mixer_ui_id[1], $count, 0)
+				set_menu_item_visibility(%mixer_ui_id[2], $count, 0)
+			end if
+			inc($count)
+		end while
+		
+		make_persistent($mixer_preset_menu)
+		read_persistent_var($mixer_preset_menu)
+		
+		declare $last_mixer_preset
+		$last_mixer_preset := $mixer_preset_menu
+		$mixer_preset_menu_new := $mixer_preset_menu
+		
+		if($mixer_preset_flag = 1)
+			set_control_par(%mixer_ui_id[2],$CONTROL_PAR_HIDE,$HIDE_WHOLE_CONTROL)
+		else
+			set_control_par(%mixer_ui_id[1],$CONTROL_PAR_HIDE,$HIDE_WHOLE_CONTROL)
+		end if
+		
+		declare $mixer_preset_load_id_1
+		declare $mixer_preset_load_id_2
+		
+		$mixer_init_flag := 0
+	
+		{/Populate Menu & Information}
+	{/Control Group "Mixer"}
+	
+	{Control Group "Groove"}
+		declare $old_play
+	
+		{declarations}
+		declare ui_button $play
+		declare ui_label $groove_display (1, 1)
+		declare ui_button $prev_groove
+		declare ui_button $next_groove
+		{/declarations}
+		
+		{ui_ids}
+		declare %ui_id[5]
+		%ui_id[1] := get_ui_id($play)
+		%ui_id[2] := get_ui_id($groove_display)
+		%ui_id[3] := get_ui_id($prev_groove)
+		%ui_id[4] := get_ui_id($next_groove)
+		{/ui_ids}
+		
+		{Pictures}
+		set_control_par_str(%ui_id[1],$CONTROL_PAR_PICTURE,"NID_header_btn_play")
+		set_control_par_str(%ui_id[2],$CONTROL_PAR_PICTURE,"NID_header_button_drag")
+		set_control_par_str(%ui_id[3],$CONTROL_PAR_PICTURE,"NID_header_btn_prev")
+		set_control_par_str(%ui_id[4],$CONTROL_PAR_PICTURE,"NID_header_btn_next")
+		{/Pictures}
+		
+		{Font IDs & Text Position}
+		set_control_par(%ui_id[2], $CONTROL_PAR_FONT_TYPE, $FONT_2_ID)
+		set_control_par(%ui_id[2], $CONTROL_PAR_TEXTPOS_Y,3)
+		{/Font IDs & Text Position}
+		
+		{BG}
+		{set_control_par(%ui_id[2], $CONTROL_PAR_HIDE, $HIDE_PART_BG)}
+		{/BG}
+		
+		{Position}
+		set_control_par(%ui_id[1],$CONTROL_PAR_POS_X,458)
+		set_control_par(%ui_id[1],$CONTROL_PAR_POS_Y,11)
+		
+		set_control_par(%ui_id[2],$CONTROL_PAR_POS_X,484)
+		set_control_par(%ui_id[2],$CONTROL_PAR_POS_Y,32)
+		
+		set_control_par(%ui_id[3],$CONTROL_PAR_POS_X,589)
+		set_control_par(%ui_id[3],$CONTROL_PAR_POS_Y,13)
+		
+		set_control_par(%ui_id[4],$CONTROL_PAR_POS_X,605)
+		set_control_par(%ui_id[4],$CONTROL_PAR_POS_Y,13)
+		{/Position}
+		
+		{Size}		
+		set_control_par(%ui_id[1],$CONTROL_PAR_WIDTH,28)
+		set_control_par(%ui_id[1],$CONTROL_PAR_HEIGHT,42)
+		
+		set_control_par(%ui_id[2],$CONTROL_PAR_WIDTH,135)
+		set_control_par(%ui_id[2],$CONTROL_PAR_HEIGHT,16)
+		
+		set_control_par(%ui_id[3],$CONTROL_PAR_WIDTH,19)
+		set_control_par(%ui_id[3],$CONTROL_PAR_HEIGHT,18)
+		
+		set_control_par(%ui_id[4],$CONTROL_PAR_WIDTH,19)
+		set_control_par(%ui_id[4],$CONTROL_PAR_HEIGHT,18)
+		{/Size}
+		
+		{Text}
+		set_control_par_str(%ui_id[1],$CONTROL_PAR_TEXT,"")
+		set_control_par_str(%ui_id[3],$CONTROL_PAR_TEXT,"")
+		set_control_par_str(%ui_id[4],$CONTROL_PAR_TEXT,"")
+		{/Text}
+		
+		{Help Text}
+		set_control_par_str(%ui_id[1],$CONTROL_PAR_HELP,"Play: Use this control to start or stop playback. Playback is always following host song position if available.")
+		set_control_par_str(%ui_id[2],$CONTROL_PAR_HELP,"Active Groove: This is the area where the active groove or fill is displayed at any time. This is also the area from which you can drag the groove to your host project.")
+		set_control_par_str(%ui_id[3],$CONTROL_PAR_HELP,"Previous Groove: Use this control to skip to the previous variation of the active groove or fill.")
+		set_control_par_str(%ui_id[4],$CONTROL_PAR_HELP,"Next Groove: Use this control to skip to the next variation of the active groove or fill.")
+		{/Help Text}
+		
+		{Other}
+		set_control_par(%ui_id[2],$CONTROL_PAR_DND_BEHAVIOUR,1) 
+		{/Other}
+	{/Control Group "Groove"}
+
+	{Control Group "Kit"}
+		{declarations}
+		{declare ui_button $audition}
+		declare ui_button $select_by_midi
+		
+		{declare ui_switch $show_triggers}
+
+		declare $sel_by_midi_flag
+	
+		declare ui_button $kick_sel
+		declare ui_button $snare_sel
+		declare ui_button $hh_sel
+		declare ui_button $tom1_sel
+		declare ui_button $tom2_sel
+		declare ui_button $tom3_sel
+		declare ui_button $tom4_sel
+		declare ui_button $tom5_sel
+		declare ui_button $cymb1_sel
+		declare ui_button $cymb2_sel
+		declare ui_button $cymb3_sel
+		declare ui_button $cymb4_sel
+		declare ui_button $cymb5_sel
+		declare ui_button $cymb6_sel
+		declare ui_button $cymb7_sel
+		declare ui_button $perc1_sel
+		declare ui_button $perc2_sel
+		declare ui_button $perc3_sel
+		declare ui_button $perc4_sel
+		declare ui_button $perc5_sel
+		
+		declare ui_label $kick_msk (1, 1)
+		declare ui_label $hh_msk (1, 1)
+		declare ui_label $tom1_msk (1, 1)
+		declare ui_label $tom2_msk (1, 1)
+		declare ui_label $tom3_msk (1, 1)
+		declare ui_label $tom4_msk (1, 1)
+		declare ui_label $tom5_msk (1, 1)
+		declare ui_label $cymb1_msk (1, 1)
+		declare ui_label $cymb2_msk (1, 1)
+		declare ui_label $cymb3_msk (1, 1)
+		declare ui_label $cymb4_msk (1, 1)
+		declare ui_label $cymb5_msk (1, 1)
+		declare ui_label $cymb6_msk (1, 1)
+		declare ui_label $cymb7_msk (1, 1)
+		declare ui_label $perc1_msk (1, 1)
+		declare ui_label $perc2_msk (1, 1)
+		declare ui_label $perc3_msk (1, 1)
+		declare ui_label $perc4_msk (1, 1)
+		declare ui_label $perc5_msk (1, 1)
+		declare ui_label $snare_msk (1, 1)
+		
+		declare ui_label $kick_tr (1, 1)
+		declare ui_label $snare_tr (1, 1)
+		declare ui_label $hh_tr (1, 1)
+		declare ui_label $tom1_tr (1, 1)
+		declare ui_label $tom2_tr (1, 1)
+		declare ui_label $tom3_tr (1, 1)
+		declare ui_label $tom4_tr (1, 1)
+		declare ui_label $tom5_tr (1, 1)
+		declare ui_label $cymb1_tr (1, 1)
+		declare ui_label $cymb2_tr (1, 1)
+		declare ui_label $cymb3_tr (1, 1)
+		declare ui_label $cymb4_tr (1, 1)
+		declare ui_label $cymb5_tr (1, 1)
+		declare ui_label $cymb6_tr (1, 1)
+		declare ui_label $cymb7_tr (1, 1)
+		declare ui_label $perc1_tr (1, 1)
+		declare ui_label $perc2_tr (1, 1)
+		declare ui_label $perc3_tr (1, 1)
+		declare ui_label $perc4_tr (1, 1)
+		declare ui_label $perc5_tr (1, 1)
+		
+		declare ui_button $snare_a
+		declare ui_button $snare_b
+		{/declarations}
+		
+		{Persistency}
+		{make_persistent($audition)}
+		make_persistent($select_by_midi)
+		make_persistent($sel_by_midi_flag)
+		read_persistent_var($sel_by_midi_flag)
+		
+		{make_persistent($show_triggers)}
+		{read_persistent_var($show_triggers)}
+		
+		{/Persistency}
+		
+		{ui_ids}
+		declare %kit_id[1]
+		{%kit_id[0] := get_ui_id($audition)}
+		%kit_id[0] := get_ui_id($select_by_midi)
+		{%kit_id[2] := get_ui_id($show_triggers)}
+		
+		declare %kit_sel_id[$NUM_INSTRUMENTS]
+		%kit_sel_id[$KICK_ID] := get_ui_id($kick_sel)
+		%kit_sel_id[$SNARE_ID] := get_ui_id($snare_sel)
+		%kit_sel_id[$HH_ID] := get_ui_id($hh_sel)
+		%kit_sel_id[$TOM1_ID] := get_ui_id($tom1_sel)
+		%kit_sel_id[$TOM2_ID] := get_ui_id($tom2_sel)
+		%kit_sel_id[$TOM3_ID] := get_ui_id($tom3_sel)
+		%kit_sel_id[$TOM4_ID] := get_ui_id($tom4_sel)
+		%kit_sel_id[$TOM5_ID] := get_ui_id($tom5_sel)
+		%kit_sel_id[$CYMB1_ID] := get_ui_id($cymb1_sel)
+		%kit_sel_id[$CYMB2_ID] := get_ui_id($cymb2_sel)
+		%kit_sel_id[$CYMB3_ID] := get_ui_id($cymb3_sel)
+		%kit_sel_id[$CYMB4_ID] := get_ui_id($cymb4_sel)
+		%kit_sel_id[$CYMB5_ID] := get_ui_id($cymb5_sel)
+		%kit_sel_id[$CYMB6_ID] := get_ui_id($cymb6_sel)
+		%kit_sel_id[$CYMB7_ID] := get_ui_id($cymb7_sel)
+		%kit_sel_id[$PERC1_ID] := get_ui_id($perc1_sel)
+		%kit_sel_id[$PERC2_ID] := get_ui_id($perc2_sel)
+		%kit_sel_id[$PERC3_ID] := get_ui_id($perc3_sel)
+		%kit_sel_id[$PERC4_ID] := get_ui_id($perc4_sel)
+		%kit_sel_id[$PERC5_ID] := get_ui_id($perc5_sel)
+		
+		declare %kit_msk_id[$NUM_INSTRUMENTS]
+		%kit_msk_id[$KICK_ID] := get_ui_id($kick_msk)
+		%kit_msk_id[$SNARE_ID] := get_ui_id($snare_msk)
+		%kit_msk_id[$HH_ID] := get_ui_id($hh_msk)
+		%kit_msk_id[$TOM1_ID] := get_ui_id($tom1_msk)
+		%kit_msk_id[$TOM2_ID] := get_ui_id($tom2_msk)
+		%kit_msk_id[$TOM3_ID] := get_ui_id($tom3_msk)
+		%kit_msk_id[$TOM4_ID] := get_ui_id($tom4_msk)
+		%kit_msk_id[$TOM5_ID] := get_ui_id($tom5_msk)
+		%kit_msk_id[$CYMB1_ID] := get_ui_id($cymb1_msk)
+		%kit_msk_id[$CYMB2_ID] := get_ui_id($cymb2_msk)
+		%kit_msk_id[$CYMB3_ID] := get_ui_id($cymb3_msk)
+		%kit_msk_id[$CYMB4_ID] := get_ui_id($cymb4_msk)
+		%kit_msk_id[$CYMB5_ID] := get_ui_id($cymb5_msk)
+		%kit_msk_id[$CYMB6_ID] := get_ui_id($cymb6_msk)
+		%kit_msk_id[$CYMB7_ID] := get_ui_id($cymb7_msk)
+		%kit_msk_id[$PERC1_ID] := get_ui_id($perc1_msk)
+		%kit_msk_id[$PERC2_ID] := get_ui_id($perc2_msk)
+		%kit_msk_id[$PERC3_ID] := get_ui_id($perc3_msk)
+		%kit_msk_id[$PERC4_ID] := get_ui_id($perc4_msk)
+		%kit_msk_id[$PERC5_ID] := get_ui_id($perc5_msk)
+		
+		declare %kit_tr_id[$NUM_INSTRUMENTS]
+		%kit_tr_id[$KICK_ID] := get_ui_id($kick_tr)
+		%kit_tr_id[$SNARE_ID] := get_ui_id($snare_tr)
+		%kit_tr_id[$HH_ID] := get_ui_id($hh_tr)
+		%kit_tr_id[$TOM1_ID] := get_ui_id($tom1_tr)
+		%kit_tr_id[$TOM2_ID] := get_ui_id($tom2_tr)
+		%kit_tr_id[$TOM3_ID] := get_ui_id($tom3_tr)
+		%kit_tr_id[$TOM4_ID] := get_ui_id($tom4_tr)
+		%kit_tr_id[$TOM5_ID] := get_ui_id($tom5_tr)
+		%kit_tr_id[$CYMB1_ID] := get_ui_id($cymb1_tr)
+		%kit_tr_id[$CYMB2_ID] := get_ui_id($cymb2_tr)
+		%kit_tr_id[$CYMB3_ID] := get_ui_id($cymb3_tr)
+		%kit_tr_id[$CYMB4_ID] := get_ui_id($cymb4_tr)
+		%kit_tr_id[$CYMB5_ID] := get_ui_id($cymb5_tr)
+		%kit_tr_id[$CYMB6_ID] := get_ui_id($cymb6_tr)
+		%kit_tr_id[$CYMB7_ID] := get_ui_id($cymb7_tr)
+		%kit_tr_id[$PERC1_ID] := get_ui_id($perc1_tr)
+		%kit_tr_id[$PERC2_ID] := get_ui_id($perc2_tr)
+		%kit_tr_id[$PERC3_ID] := get_ui_id($perc3_tr)
+		%kit_tr_id[$PERC4_ID] := get_ui_id($perc4_tr)
+		%kit_tr_id[$PERC5_ID] := get_ui_id($perc5_tr)
+		
+		declare %kit_sn_id[2]
+		%kit_sn_id[0] := get_ui_id($snare_a)
+		%kit_sn_id[1] := get_ui_id($snare_b)
+		{/ui_ids}
+		
+		{Hide}
+		$count_1 := 0
+		while ($count_1 < $NUM_INSTRUMENTS)
+			if (%NUM_DIR_MICS[$count_1] = -1)
+				set_control_par(%kit_msk_id[$count_1], $CONTROL_PAR_HIDE, $HIDE_WHOLE_CONTROL)
+				set_control_par(%kit_sel_id[$count_1], $CONTROL_PAR_HIDE, $HIDE_WHOLE_CONTROL)
+				set_control_par(%kit_tr_id[$count_1], $CONTROL_PAR_HIDE, $HIDE_WHOLE_CONTROL)
+			end if
+			inc($count_1)
+		end while
+		
+		set_control_par(%kit_sn_id[0], $CONTROL_PAR_HIDE, $HIDE_WHOLE_CONTROL)
+		set_control_par(%kit_sn_id[1], $CONTROL_PAR_HIDE, $HIDE_WHOLE_CONTROL)
+		{/Hide}
+		
+		{Pictures}
+		{set_control_par_str(%kit_id[0],$CONTROL_PAR_PICTURE,"NID_kit_btn_audition")}
+		set_control_par_str(%kit_id[0],$CONTROL_PAR_PICTURE,"NID_kit_btn_select_by_midi")
+		{set_control_par_str(%kit_id[2],$CONTROL_PAR_PICTURE, "NID_kit_btn_triggers")}
+		
+		$count_1 := 0
+		while ($count_1 < $NUM_INSTRUMENTS)
+			set_control_par_str(%kit_sel_id[$count_1],$CONTROL_PAR_PICTURE,"NID_kit_btn_highlight")
+			inc($count_1)
+		end while
+		
+		set_control_par_str(%kit_msk_id[$KICK_ID],$CONTROL_PAR_PICTURE,"NID_kit_b_kick_msk")
+		set_control_par_str(%kit_msk_id[$SNARE_ID],$CONTROL_PAR_PICTURE,"NID_kit_b_snare_msk")
+		set_control_par_str(%kit_msk_id[$HH_ID],$CONTROL_PAR_PICTURE,"NID_kit_b_hihat_msk")
+		set_control_par_str(%kit_msk_id[$TOM1_ID],$CONTROL_PAR_PICTURE,"NID_kit_b_tom1_msk")
+		set_control_par_str(%kit_msk_id[$TOM2_ID],$CONTROL_PAR_PICTURE,"NID_kit_b_tom2_msk")
+		set_control_par_str(%kit_msk_id[$TOM3_ID],$CONTROL_PAR_PICTURE,"NID_kit_b_tom3_msk")
+		set_control_par_str(%kit_msk_id[$TOM4_ID],$CONTROL_PAR_PICTURE,"NID_kit_b_tom4_msk")
+		set_control_par_str(%kit_msk_id[$TOM5_ID],$CONTROL_PAR_PICTURE,"NID_kit_b_tom5_msk")
+		set_control_par_str(%kit_msk_id[$CYMB1_ID],$CONTROL_PAR_PICTURE,"NID_kit_b_crash1_msk")
+		set_control_par_str(%kit_msk_id[$CYMB2_ID],$CONTROL_PAR_PICTURE,"NID_kit_b_crash2_msk")
+		set_control_par_str(%kit_msk_id[$CYMB3_ID],$CONTROL_PAR_PICTURE,"NID_kit_b_ride_msk")
+		set_control_par_str(%kit_msk_id[$CYMB4_ID],$CONTROL_PAR_PICTURE,"NID_kit_b_china_msk")
+		set_control_par_str(%kit_msk_id[$CYMB5_ID],$CONTROL_PAR_PICTURE,"NID_kit_b_splash_msk")
+		set_control_par_str(%kit_msk_id[$CYMB6_ID],$CONTROL_PAR_PICTURE,"NID_kit_b_??_msk")
+		set_control_par_str(%kit_msk_id[$CYMB7_ID],$CONTROL_PAR_PICTURE,"NID_kit_b_??_msk")
+		set_control_par_str(%kit_msk_id[$PERC1_ID],$CONTROL_PAR_PICTURE,"NID_kit_perc_sticks_msk")
+		set_control_par_str(%kit_msk_id[$PERC2_ID],$CONTROL_PAR_PICTURE,"NID_kit_perc_clap_msk")
+		set_control_par_str(%kit_msk_id[$PERC3_ID],$CONTROL_PAR_PICTURE,"NID_kit_perc_tambourine_msk")
+		set_control_par_str(%kit_msk_id[$PERC4_ID],$CONTROL_PAR_PICTURE,"NID_kit_perc_woodblock_msk")
+		set_control_par_str(%kit_msk_id[$PERC5_ID],$CONTROL_PAR_PICTURE,"NID_percussion_msk")
+
+		set_control_par_str(%kit_tr_id[$KICK_ID],$CONTROL_PAR_PICTURE,"NID_kit_b_kick")
+		set_control_par_str(%kit_tr_id[$SNARE_ID],$CONTROL_PAR_PICTURE,"NID_kit_b_snare1")
+		set_control_par_str(%kit_tr_id[$HH_ID],$CONTROL_PAR_PICTURE,"NID_kit_b_hihat")
+		set_control_par_str(%kit_tr_id[$TOM1_ID],$CONTROL_PAR_PICTURE,"NID_kit_b_tom1")
+		set_control_par_str(%kit_tr_id[$TOM2_ID],$CONTROL_PAR_PICTURE,"NID_kit_b_tom2")
+		set_control_par_str(%kit_tr_id[$TOM3_ID],$CONTROL_PAR_PICTURE,"NID_kit_b_tom3")
+		set_control_par_str(%kit_tr_id[$TOM4_ID],$CONTROL_PAR_PICTURE,"NID_kit_b_tom4")
+		set_control_par_str(%kit_tr_id[$TOM5_ID],$CONTROL_PAR_PICTURE,"NID_kit_b_tom5")
+		set_control_par_str(%kit_tr_id[$CYMB1_ID],$CONTROL_PAR_PICTURE,"NID_kit_b_crash1")
+		set_control_par_str(%kit_tr_id[$CYMB2_ID],$CONTROL_PAR_PICTURE,"NID_kit_b_crash2")
+		set_control_par_str(%kit_tr_id[$CYMB3_ID],$CONTROL_PAR_PICTURE,"NID_kit_b_ride")
+		set_control_par_str(%kit_tr_id[$CYMB4_ID],$CONTROL_PAR_PICTURE,"NID_kit_b_china")
+		set_control_par_str(%kit_tr_id[$CYMB5_ID],$CONTROL_PAR_PICTURE,"NID_kit_b_splash")
+		set_control_par_str(%kit_tr_id[$CYMB6_ID],$CONTROL_PAR_PICTURE,"NID_kit_b_??")
+		set_control_par_str(%kit_tr_id[$CYMB7_ID],$CONTROL_PAR_PICTURE,"NID_kit_b_??")
+		set_control_par_str(%kit_tr_id[$PERC1_ID],$CONTROL_PAR_PICTURE,"NID_percussion")
+		set_control_par_str(%kit_tr_id[$PERC2_ID],$CONTROL_PAR_PICTURE,"NID_percussion")
+		set_control_par_str(%kit_tr_id[$PERC3_ID],$CONTROL_PAR_PICTURE,"NID_percussion")
+		set_control_par_str(%kit_tr_id[$PERC4_ID],$CONTROL_PAR_PICTURE,"NID_percussion")
+		set_control_par_str(%kit_tr_id[$PERC5_ID],$CONTROL_PAR_PICTURE,"NID_percussion")
+		
+		set_control_par_str(%kit_sn_id[0],$CONTROL_PAR_PICTURE,"NID_kit_snare_a")
+		set_control_par_str(%kit_sn_id[1],$CONTROL_PAR_PICTURE,"NID_kit_snare_b")
+		{/Pictures}
+		
+		{Position}
+		{set_control_par(%kit_id[0],$CONTROL_PAR_POS_X,25)
+		set_control_par(%kit_id[0],$CONTROL_PAR_POS_Y,56)}
+		set_control_par(%kit_id[0],$CONTROL_PAR_POS_X,524)
+		set_control_par(%kit_id[0],$CONTROL_PAR_POS_Y,59)
+		{set_control_par(%kit_id[2],$CONTROL_PAR_POS_X,3)
+		set_control_par(%kit_id[2],$CONTROL_PAR_POS_Y,56)}
+		set_control_par(%kit_msk_id[$KICK_ID],$CONTROL_PAR_POS_X,212)
+		set_control_par(%kit_msk_id[$KICK_ID],$CONTROL_PAR_POS_Y,161)
+		set_control_par(%kit_msk_id[$SNARE_ID],$CONTROL_PAR_POS_X,134)
+		set_control_par(%kit_msk_id[$SNARE_ID],$CONTROL_PAR_POS_Y,172)
+		set_control_par(%kit_msk_id[$HH_ID],$CONTROL_PAR_POS_X,32)
+		set_control_par(%kit_msk_id[$HH_ID],$CONTROL_PAR_POS_Y,107)
+		set_control_par(%kit_msk_id[$TOM1_ID],$CONTROL_PAR_POS_X,117)
+		set_control_par(%kit_msk_id[$TOM1_ID],$CONTROL_PAR_POS_Y,118)
+		set_control_par(%kit_msk_id[$TOM2_ID],$CONTROL_PAR_POS_X,189)
+		set_control_par(%kit_msk_id[$TOM2_ID],$CONTROL_PAR_POS_Y,109)
+		set_control_par(%kit_msk_id[$TOM3_ID],$CONTROL_PAR_POS_X,316)
+		set_control_par(%kit_msk_id[$TOM3_ID],$CONTROL_PAR_POS_Y,177)
+		set_control_par(%kit_msk_id[$TOM4_ID],$CONTROL_PAR_POS_X,391)
+		set_control_par(%kit_msk_id[$TOM4_ID],$CONTROL_PAR_POS_Y,201)
+		set_control_par(%kit_msk_id[$CYMB1_ID],$CONTROL_PAR_POS_X,141)
+		set_control_par(%kit_msk_id[$CYMB1_ID],$CONTROL_PAR_POS_Y,61)
+		set_control_par(%kit_msk_id[$CYMB2_ID],$CONTROL_PAR_POS_X,384)
+		set_control_par(%kit_msk_id[$CYMB2_ID],$CONTROL_PAR_POS_Y,76)
+		set_control_par(%kit_msk_id[$CYMB3_ID],$CONTROL_PAR_POS_X,277)
+		set_control_par(%kit_msk_id[$CYMB3_ID],$CONTROL_PAR_POS_Y,125)
+		set_control_par(%kit_msk_id[$CYMB4_ID],$CONTROL_PAR_POS_X,478)
+		set_control_par(%kit_msk_id[$CYMB4_ID],$CONTROL_PAR_POS_Y,104)
+		set_control_par(%kit_msk_id[$CYMB5_ID],$CONTROL_PAR_POS_X,82)
+		set_control_par(%kit_msk_id[$CYMB5_ID],$CONTROL_PAR_POS_Y,84)
+		set_control_par(%kit_msk_id[$PERC1_ID],$CONTROL_PAR_POS_X,581)
+		set_control_par(%kit_msk_id[$PERC1_ID],$CONTROL_PAR_POS_Y,248)
+		set_control_par(%kit_msk_id[$PERC2_ID],$CONTROL_PAR_POS_X,581)
+		set_control_par(%kit_msk_id[$PERC2_ID],$CONTROL_PAR_POS_Y,282)
+		set_control_par(%kit_msk_id[$PERC3_ID],$CONTROL_PAR_POS_X,581)
+		set_control_par(%kit_msk_id[$PERC3_ID],$CONTROL_PAR_POS_Y,316)
+		set_control_par(%kit_msk_id[$PERC4_ID],$CONTROL_PAR_POS_X,581)
+		set_control_par(%kit_msk_id[$PERC4_ID],$CONTROL_PAR_POS_Y,351)
+		
+		set_control_par(%kit_sel_id[$KICK_ID],$CONTROL_PAR_POS_X,214)
+		set_control_par(%kit_sel_id[$KICK_ID],$CONTROL_PAR_POS_Y,194)
+		set_control_par(%kit_sel_id[$SNARE_ID],$CONTROL_PAR_POS_X,133)
+		set_control_par(%kit_sel_id[$SNARE_ID],$CONTROL_PAR_POS_Y,171)
+		set_control_par(%kit_sel_id[$HH_ID],$CONTROL_PAR_POS_X,26)
+		set_control_par(%kit_sel_id[$HH_ID],$CONTROL_PAR_POS_Y,157)
+		set_control_par(%kit_sel_id[$TOM1_ID],$CONTROL_PAR_POS_X,112)
+		set_control_par(%kit_sel_id[$TOM1_ID],$CONTROL_PAR_POS_Y,113)
+		set_control_par(%kit_sel_id[$TOM2_ID],$CONTROL_PAR_POS_X,185)
+		set_control_par(%kit_sel_id[$TOM2_ID],$CONTROL_PAR_POS_Y,104)
+		set_control_par(%kit_sel_id[$TOM3_ID],$CONTROL_PAR_POS_X,339)
+		set_control_par(%kit_sel_id[$TOM3_ID],$CONTROL_PAR_POS_Y,173)
+		set_control_par(%kit_sel_id[$TOM4_ID],$CONTROL_PAR_POS_X,407)
+		set_control_par(%kit_sel_id[$TOM4_ID],$CONTROL_PAR_POS_Y,196)
+		set_control_par(%kit_sel_id[$CYMB1_ID],$CONTROL_PAR_POS_X,135)
+		set_control_par(%kit_sel_id[$CYMB1_ID],$CONTROL_PAR_POS_Y,55)
+		set_control_par(%kit_sel_id[$CYMB2_ID],$CONTROL_PAR_POS_X,377)
+		set_control_par(%kit_sel_id[$CYMB2_ID],$CONTROL_PAR_POS_Y,71)
+		set_control_par(%kit_sel_id[$CYMB3_ID],$CONTROL_PAR_POS_X,272)
+		set_control_par(%kit_sel_id[$CYMB3_ID],$CONTROL_PAR_POS_Y,118)
+		set_control_par(%kit_sel_id[$CYMB4_ID],$CONTROL_PAR_POS_X,473)
+		set_control_par(%kit_sel_id[$CYMB4_ID],$CONTROL_PAR_POS_Y,101)
+		set_control_par(%kit_sel_id[$CYMB5_ID],$CONTROL_PAR_POS_X,83)
+		set_control_par(%kit_sel_id[$CYMB5_ID],$CONTROL_PAR_POS_Y,81)
+		set_control_par(%kit_sel_id[$PERC1_ID],$CONTROL_PAR_POS_X,580)
+		set_control_par(%kit_sel_id[$PERC1_ID],$CONTROL_PAR_POS_Y,247)
+		set_control_par(%kit_sel_id[$PERC2_ID],$CONTROL_PAR_POS_X,580)
+		set_control_par(%kit_sel_id[$PERC2_ID],$CONTROL_PAR_POS_Y,280)
+		set_control_par(%kit_sel_id[$PERC3_ID],$CONTROL_PAR_POS_X,580)
+		set_control_par(%kit_sel_id[$PERC3_ID],$CONTROL_PAR_POS_Y,314)
+		set_control_par(%kit_sel_id[$PERC4_ID],$CONTROL_PAR_POS_X,580)
+		set_control_par(%kit_sel_id[$PERC4_ID],$CONTROL_PAR_POS_Y,348)
+		
+		set_control_par(%kit_tr_id[$KICK_ID],$CONTROL_PAR_POS_X,268)
+		set_control_par(%kit_tr_id[$KICK_ID],$CONTROL_PAR_POS_Y,234)
+		set_control_par(%kit_tr_id[$SNARE_ID],$CONTROL_PAR_POS_X,170)
+		set_control_par(%kit_tr_id[$SNARE_ID],$CONTROL_PAR_POS_Y,183)
+		set_control_par(%kit_tr_id[$HH_ID],$CONTROL_PAR_POS_X,85)
+		set_control_par(%kit_tr_id[$HH_ID],$CONTROL_PAR_POS_Y,172)
+		set_control_par(%kit_tr_id[$TOM1_ID],$CONTROL_PAR_POS_X,138)
+		set_control_par(%kit_tr_id[$TOM1_ID],$CONTROL_PAR_POS_Y,126)
+		set_control_par(%kit_tr_id[$TOM2_ID],$CONTROL_PAR_POS_X,214)
+		set_control_par(%kit_tr_id[$TOM2_ID],$CONTROL_PAR_POS_Y,119)
+		set_control_par(%kit_tr_id[$TOM3_ID],$CONTROL_PAR_POS_X,380)
+		set_control_par(%kit_tr_id[$TOM3_ID],$CONTROL_PAR_POS_Y,187)
+		set_control_par(%kit_tr_id[$TOM4_ID],$CONTROL_PAR_POS_X,460)
+		set_control_par(%kit_tr_id[$TOM4_ID],$CONTROL_PAR_POS_Y,217)
+		set_control_par(%kit_tr_id[$CYMB1_ID],$CONTROL_PAR_POS_X,184)
+		set_control_par(%kit_tr_id[$CYMB1_ID],$CONTROL_PAR_POS_Y,80)
+		set_control_par(%kit_tr_id[$CYMB2_ID],$CONTROL_PAR_POS_X,407)
+		set_control_par(%kit_tr_id[$CYMB2_ID],$CONTROL_PAR_POS_Y,108)
+		set_control_par(%kit_tr_id[$CYMB3_ID],$CONTROL_PAR_POS_X,315)
+		set_control_par(%kit_tr_id[$CYMB3_ID],$CONTROL_PAR_POS_Y,152)
+		set_control_par(%kit_tr_id[$CYMB4_ID],$CONTROL_PAR_POS_X,496)
+		set_control_par(%kit_tr_id[$CYMB4_ID],$CONTROL_PAR_POS_Y,163)
+		set_control_par(%kit_tr_id[$CYMB5_ID],$CONTROL_PAR_POS_X,111)
+		set_control_par(%kit_tr_id[$CYMB5_ID],$CONTROL_PAR_POS_Y,98)
+		set_control_par(%kit_tr_id[$PERC1_ID],$CONTROL_PAR_POS_X,589)
+		set_control_par(%kit_tr_id[$PERC1_ID],$CONTROL_PAR_POS_Y,256)
+		set_control_par(%kit_tr_id[$PERC2_ID],$CONTROL_PAR_POS_X,589)
+		set_control_par(%kit_tr_id[$PERC2_ID],$CONTROL_PAR_POS_Y,289)
+		set_control_par(%kit_tr_id[$PERC3_ID],$CONTROL_PAR_POS_X,589)
+		set_control_par(%kit_tr_id[$PERC3_ID],$CONTROL_PAR_POS_Y,323)
+		set_control_par(%kit_tr_id[$PERC4_ID],$CONTROL_PAR_POS_X,589)
+		set_control_par(%kit_tr_id[$PERC4_ID],$CONTROL_PAR_POS_Y,357)
+		
+		set_control_par(%kit_sn_id[0],$CONTROL_PAR_POS_X,171)
+		set_control_par(%kit_sn_id[0],$CONTROL_PAR_POS_Y,268)
+		set_control_par(%kit_sn_id[1],$CONTROL_PAR_POS_X,187)
+		set_control_par(%kit_sn_id[1],$CONTROL_PAR_POS_Y,268)
+		{/Position}
+		
+		{Size}		
+		{set_control_par(%kit_id[0],$CONTROL_PAR_WIDTH,24)
+		set_control_par(%kit_id[0],$CONTROL_PAR_HEIGHT,29)}
+		set_control_par(%kit_id[0],$CONTROL_PAR_WIDTH,103)
+		set_control_par(%kit_id[0],$CONTROL_PAR_HEIGHT,21)
+		
+		{set_control_par(%kit_id[2],$CONTROL_PAR_WIDTH, 29)
+		set_control_par(%kit_id[2],$CONTROL_PAR_HEIGHT, 29)}
+		
+		set_control_par(%kit_msk_id[$KICK_ID],$CONTROL_PAR_WIDTH,138)
+		set_control_par(%kit_msk_id[$KICK_ID],$CONTROL_PAR_HEIGHT,118)
+		set_control_par(%kit_msk_id[$SNARE_ID],$CONTROL_PAR_WIDTH,110)
+		set_control_par(%kit_msk_id[$SNARE_ID],$CONTROL_PAR_HEIGHT,90)
+		set_control_par(%kit_msk_id[$HH_ID],$CONTROL_PAR_WIDTH,122)
+		set_control_par(%kit_msk_id[$HH_ID],$CONTROL_PAR_HEIGHT,50)
+		set_control_par(%kit_msk_id[$TOM1_ID],$CONTROL_PAR_WIDTH,87)
+		set_control_par(%kit_msk_id[$TOM1_ID],$CONTROL_PAR_HEIGHT,52)
+		set_control_par(%kit_msk_id[$TOM2_ID],$CONTROL_PAR_WIDTH,87)
+		set_control_par(%kit_msk_id[$TOM2_ID],$CONTROL_PAR_HEIGHT,52)
+		set_control_par(%kit_msk_id[$TOM3_ID],$CONTROL_PAR_WIDTH,113)
+		set_control_par(%kit_msk_id[$TOM3_ID],$CONTROL_PAR_HEIGHT,47)
+		set_control_par(%kit_msk_id[$TOM4_ID],$CONTROL_PAR_WIDTH,148)
+		set_control_par(%kit_msk_id[$TOM4_ID],$CONTROL_PAR_HEIGHT,64)
+		set_control_par(%kit_msk_id[$CYMB1_ID],$CONTROL_PAR_WIDTH,103)
+		set_control_par(%kit_msk_id[$CYMB1_ID],$CONTROL_PAR_HEIGHT,55)
+		set_control_par(%kit_msk_id[$CYMB2_ID],$CONTROL_PAR_WIDTH,123)
+		set_control_par(%kit_msk_id[$CYMB2_ID],$CONTROL_PAR_HEIGHT,60)
+		set_control_par(%kit_msk_id[$CYMB3_ID],$CONTROL_PAR_WIDTH,129)
+		set_control_par(%kit_msk_id[$CYMB3_ID],$CONTROL_PAR_HEIGHT,62)
+		set_control_par(%kit_msk_id[$CYMB4_ID],$CONTROL_PAR_WIDTH,156)
+		set_control_par(%kit_msk_id[$CYMB4_ID],$CONTROL_PAR_HEIGHT,83)
+		set_control_par(%kit_msk_id[$CYMB5_ID],$CONTROL_PAR_WIDTH,76)
+		set_control_par(%kit_msk_id[$CYMB5_ID],$CONTROL_PAR_HEIGHT,43)
+		set_control_par(%kit_msk_id[$PERC1_ID],$CONTROL_PAR_WIDTH,42)
+		set_control_par(%kit_msk_id[$PERC1_ID],$CONTROL_PAR_HEIGHT,42)
+		set_control_par(%kit_msk_id[$PERC2_ID],$CONTROL_PAR_WIDTH,42)
+		set_control_par(%kit_msk_id[$PERC2_ID],$CONTROL_PAR_HEIGHT,42)
+		set_control_par(%kit_msk_id[$PERC3_ID],$CONTROL_PAR_WIDTH,42)
+		set_control_par(%kit_msk_id[$PERC3_ID],$CONTROL_PAR_HEIGHT,42)
+		set_control_par(%kit_msk_id[$PERC4_ID],$CONTROL_PAR_WIDTH,42)
+		set_control_par(%kit_msk_id[$PERC4_ID],$CONTROL_PAR_HEIGHT,42)
+		
+		set_control_par(%kit_sel_id[$KICK_ID],$CONTROL_PAR_WIDTH,138)
+		set_control_par(%kit_sel_id[$KICK_ID],$CONTROL_PAR_HEIGHT,124)
+		set_control_par(%kit_sel_id[$SNARE_ID],$CONTROL_PAR_WIDTH,113)
+		set_control_par(%kit_sel_id[$SNARE_ID],$CONTROL_PAR_HEIGHT,90)
+		set_control_par(%kit_sel_id[$HH_ID],$CONTROL_PAR_WIDTH,122)
+		set_control_par(%kit_sel_id[$HH_ID],$CONTROL_PAR_HEIGHT,44)
+		set_control_par(%kit_sel_id[$TOM1_ID],$CONTROL_PAR_WIDTH,78)
+		set_control_par(%kit_sel_id[$TOM1_ID],$CONTROL_PAR_HEIGHT,47)
+		set_control_par(%kit_sel_id[$TOM2_ID],$CONTROL_PAR_WIDTH,87)
+		set_control_par(%kit_sel_id[$TOM2_ID],$CONTROL_PAR_HEIGHT,52)
+		set_control_par(%kit_sel_id[$TOM3_ID],$CONTROL_PAR_WIDTH,108)
+		set_control_par(%kit_sel_id[$TOM3_ID],$CONTROL_PAR_HEIGHT,44)
+		set_control_par(%kit_sel_id[$TOM4_ID],$CONTROL_PAR_WIDTH,141)
+		set_control_par(%kit_sel_id[$TOM4_ID],$CONTROL_PAR_HEIGHT,61)
+		set_control_par(%kit_sel_id[$CYMB1_ID],$CONTROL_PAR_WIDTH,103)
+		set_control_par(%kit_sel_id[$CYMB1_ID],$CONTROL_PAR_HEIGHT,47)
+		set_control_par(%kit_sel_id[$CYMB2_ID],$CONTROL_PAR_WIDTH,121)
+		set_control_par(%kit_sel_id[$CYMB2_ID],$CONTROL_PAR_HEIGHT,61)
+		set_control_par(%kit_sel_id[$CYMB3_ID],$CONTROL_PAR_WIDTH,127)
+		set_control_par(%kit_sel_id[$CYMB3_ID],$CONTROL_PAR_HEIGHT,59)
+		set_control_par(%kit_sel_id[$CYMB4_ID],$CONTROL_PAR_WIDTH,140)
+		set_control_par(%kit_sel_id[$CYMB4_ID],$CONTROL_PAR_HEIGHT,91)
+		set_control_par(%kit_sel_id[$CYMB5_ID],$CONTROL_PAR_WIDTH,66)
+		set_control_par(%kit_sel_id[$CYMB5_ID],$CONTROL_PAR_HEIGHT,39)
+		set_control_par(%kit_sel_id[$PERC1_ID],$CONTROL_PAR_WIDTH,42)
+		set_control_par(%kit_sel_id[$PERC1_ID],$CONTROL_PAR_HEIGHT,42)
+		set_control_par(%kit_sel_id[$PERC2_ID],$CONTROL_PAR_WIDTH,42)
+		set_control_par(%kit_sel_id[$PERC2_ID],$CONTROL_PAR_HEIGHT,42)
+		set_control_par(%kit_sel_id[$PERC3_ID],$CONTROL_PAR_WIDTH,42)
+		set_control_par(%kit_sel_id[$PERC3_ID],$CONTROL_PAR_HEIGHT,42)
+		set_control_par(%kit_sel_id[$PERC4_ID],$CONTROL_PAR_WIDTH,42)
+		set_control_par(%kit_sel_id[$PERC4_ID],$CONTROL_PAR_HEIGHT,42)
+		
+		set_control_par(%kit_tr_id[$KICK_ID],$CONTROL_PAR_WIDTH,31)
+		set_control_par(%kit_tr_id[$KICK_ID],$CONTROL_PAR_HEIGHT,29)
+		set_control_par(%kit_tr_id[$SNARE_ID],$CONTROL_PAR_WIDTH,31)
+		set_control_par(%kit_tr_id[$SNARE_ID],$CONTROL_PAR_HEIGHT,29)
+		set_control_par(%kit_tr_id[$HH_ID],$CONTROL_PAR_WIDTH,31)
+		set_control_par(%kit_tr_id[$HH_ID],$CONTROL_PAR_HEIGHT,29)
+		set_control_par(%kit_tr_id[$TOM1_ID],$CONTROL_PAR_WIDTH,31)
+		set_control_par(%kit_tr_id[$TOM1_ID],$CONTROL_PAR_HEIGHT,29)
+		set_control_par(%kit_tr_id[$TOM2_ID],$CONTROL_PAR_WIDTH,31)
+		set_control_par(%kit_tr_id[$TOM2_ID],$CONTROL_PAR_HEIGHT,29)
+		set_control_par(%kit_tr_id[$TOM3_ID],$CONTROL_PAR_WIDTH,31)
+		set_control_par(%kit_tr_id[$TOM3_ID],$CONTROL_PAR_HEIGHT,29)
+		set_control_par(%kit_tr_id[$TOM4_ID],$CONTROL_PAR_WIDTH,31)
+		set_control_par(%kit_tr_id[$TOM4_ID],$CONTROL_PAR_HEIGHT,29)
+		set_control_par(%kit_tr_id[$CYMB1_ID],$CONTROL_PAR_WIDTH,31)
+		set_control_par(%kit_tr_id[$CYMB1_ID],$CONTROL_PAR_HEIGHT,29)
+		set_control_par(%kit_tr_id[$CYMB2_ID],$CONTROL_PAR_WIDTH,31)
+		set_control_par(%kit_tr_id[$CYMB2_ID],$CONTROL_PAR_HEIGHT,29)
+		set_control_par(%kit_tr_id[$CYMB3_ID],$CONTROL_PAR_WIDTH,31)
+		set_control_par(%kit_tr_id[$CYMB3_ID],$CONTROL_PAR_HEIGHT,29)
+		set_control_par(%kit_tr_id[$CYMB4_ID],$CONTROL_PAR_WIDTH,31)
+		set_control_par(%kit_tr_id[$CYMB4_ID],$CONTROL_PAR_HEIGHT,29)
+		set_control_par(%kit_tr_id[$PERC1_ID],$CONTROL_PAR_WIDTH,31)
+		set_control_par(%kit_tr_id[$PERC1_ID],$CONTROL_PAR_HEIGHT,29)
+		set_control_par(%kit_tr_id[$PERC2_ID],$CONTROL_PAR_WIDTH,31)
+		set_control_par(%kit_tr_id[$PERC2_ID],$CONTROL_PAR_HEIGHT,29)
+		set_control_par(%kit_tr_id[$PERC3_ID],$CONTROL_PAR_WIDTH,31)
+		set_control_par(%kit_tr_id[$PERC3_ID],$CONTROL_PAR_HEIGHT,29)
+		set_control_par(%kit_tr_id[$PERC4_ID],$CONTROL_PAR_WIDTH,31)
+		set_control_par(%kit_tr_id[$PERC4_ID],$CONTROL_PAR_HEIGHT,29)
+		
+		set_control_par(%kit_sn_id[0],$CONTROL_PAR_WIDTH,19)
+		set_control_par(%kit_sn_id[0],$CONTROL_PAR_HEIGHT,21)
+		set_control_par(%kit_sn_id[1],$CONTROL_PAR_WIDTH,19)
+		set_control_par(%kit_sn_id[1],$CONTROL_PAR_HEIGHT,21)
+		{/Size}
+		
+		{Text}
+		set_control_par_str(%kit_id[0], $CONTROL_PAR_TEXT, "")
+		{set_control_par_str(%kit_id[1], $CONTROL_PAR_TEXT, "")
+		
+		set_control_par_str(%kit_id[2], $CONTROL_PAR_TEXT, "")
+		set_control_par_str(%kit_id[2], $CONTROL_PAR_TEXT_ALIGNMENT, 1)}
+		
+		set_control_par_str(%kit_sn_id[0], $CONTROL_PAR_TEXT, "")
+		set_control_par_str(%kit_sn_id[1], $CONTROL_PAR_TEXT, "")
+		
+		$count_1 := 0
+		while ($count_1 < $NUM_INSTRUMENTS)
+			set_control_par_str(%kit_msk_id[$count_1], $CONTROL_PAR_TEXT, "")
+			set_control_par_str(%kit_sel_id[$count_1], $CONTROL_PAR_TEXT, "")
+			set_control_par_str(%kit_tr_id[$count_1], $CONTROL_PAR_TEXT, "")
+			inc($count_1)
+		end while
+		{/Text}
+		
+		{Help Text}
+		{set_control_par_str(%kit_id[0],$CONTROL_PAR_HELP,"Audition: Turn this one to audition the sound of an instrument by clicking on it.")}
+		set_control_par_str(%kit_id[0],$CONTROL_PAR_HELP,"Select by MIDI: If this switch is on, the instruments will be selected depending on the notes played with your MIDI input device.")
+		{set_control_par_str(%kit_id[2],$CONTROL_PAR_HELP,"Show Triggers: If this switch is on, the trigger animation will show which instrument is being triggered")}
+		
+		set_control_par_str(%kit_sel_id[$KICK_ID],$CONTROL_PAR_HELP,"Kick: Click here to select the this instrument for editing using the bottom panel.")
+		set_control_par_str(%kit_sel_id[$SNARE_ID],$CONTROL_PAR_HELP,"Snare: Click here to select the this instrument for editing using the bottom panel.")
+		set_control_par_str(%kit_sel_id[$HH_ID],$CONTROL_PAR_HELP,"Hihat: Click here to select the this instrument for editing using the bottom panel.")
+		set_control_par_str(%kit_sel_id[$TOM1_ID],$CONTROL_PAR_HELP,"Tom 1: Click here to select the this instrument for editing using the bottom panel.")
+		set_control_par_str(%kit_sel_id[$TOM2_ID],$CONTROL_PAR_HELP,"Tom 2: Click here to select the this instrument for editing using the bottom panel.")
+		set_control_par_str(%kit_sel_id[$TOM3_ID],$CONTROL_PAR_HELP,"Tom 3: Click here to select the this instrument for editing using the bottom panel.")
+		set_control_par_str(%kit_sel_id[$TOM4_ID],$CONTROL_PAR_HELP,"Tom 4: Click here to select the this instrument for editing using the bottom panel.")
+		set_control_par_str(%kit_sel_id[$TOM5_ID],$CONTROL_PAR_HELP,"Tom 5: Click here to select the this instrument for editing using the bottom panel.")
+		set_control_par_str(%kit_sel_id[$CYMB1_ID],$CONTROL_PAR_HELP,"Crash 1: Click here to select the this instrument for editing using the bottom panel.")
+		set_control_par_str(%kit_sel_id[$CYMB2_ID],$CONTROL_PAR_HELP,"Crash 2: Click here to select the this instrument for editing using the bottom panel.")
+		set_control_par_str(%kit_sel_id[$CYMB3_ID],$CONTROL_PAR_HELP,"Ride: Click here to select the this instrument for editing using the bottom panel.")
+		set_control_par_str(%kit_sel_id[$CYMB4_ID],$CONTROL_PAR_HELP,"China: Click here to select the this instrument for editing using the bottom panel.")
+		set_control_par_str(%kit_sel_id[$CYMB5_ID],$CONTROL_PAR_HELP,"Splash: Click here to select the this instrument for editing using the bottom panel.")
+		set_control_par_str(%kit_sel_id[$CYMB6_ID],$CONTROL_PAR_HELP,"Cymbal 6: Click here to select the this instrument for editing using the bottom panel.")
+		set_control_par_str(%kit_sel_id[$CYMB7_ID],$CONTROL_PAR_HELP,"Cymbal 7: Click here to select the this instrument for editing using the bottom panel.")
+		set_control_par_str(%kit_sel_id[$PERC1_ID],$CONTROL_PAR_HELP,"Sticks: Click here to select the this instrument for editing using the bottom panel.")
+		set_control_par_str(%kit_sel_id[$PERC2_ID],$CONTROL_PAR_HELP,"Claps: Click here to select the this instrument for editing using the bottom panel.")
+		set_control_par_str(%kit_sel_id[$PERC3_ID],$CONTROL_PAR_HELP,"Tambourine: Click here to select the this instrument for editing using the bottom panel.")
+		set_control_par_str(%kit_sel_id[$PERC4_ID],$CONTROL_PAR_HELP,"Woodblock: Click here to select the this instrument for editing using the bottom panel.")
+		set_control_par_str(%kit_sel_id[$PERC5_ID],$CONTROL_PAR_HELP,"Percussion: Click here to select the this instrument for editing using the bottom panel.")
+		
+		set_control_par_str(%kit_sn_id[0],$CONTROL_PAR_HELP,"Snare A: Use this selector to choose between the two available snares.")
+		set_control_par_str(%kit_sn_id[1],$CONTROL_PAR_HELP,"Snare B: Use this selector to choose between the two available snares.")
+		{/Help Text}
+		
+		{Picture State}
+		$count_1 := 0
+		while ($count_1 < $NUM_INSTRUMENTS)
+			set_control_par(%kit_sel_id[$count_1], $CONTROL_PAR_VALUE, 0)
+			set_control_par(%kit_tr_id[$count_1], $CONTROL_PAR_PICTURE_STATE, 1)
+			inc($count_1)
+		end while
+		{/Picture State}
+		
+		{Init}
+		set_control_par(%kit_sel_id[$KICK_ID], $CONTROL_PAR_VALUE, 1)
+		
+		$count_1 := 0
+		while ($count_1 < $NUM_INSTRUMENTS)
+			set_control_par(%kit_msk_id[$count_1], $CONTROL_PAR_PICTURE_STATE, pgs_get_key_val(INSTRUMENT_PURGE_STATE, $count_1))
+			inc($count_1)
+		end while
+		
+		if (pgs_get_key_val(ACTIVE_SNARE, 0) = 0)
+			if (pgs_get_key_val(INSTRUMENT_PURGE_STATE, $SNARE_ID) = 0)
+				set_control_par(%kit_msk_id[$SNARE_ID], $CONTROL_PAR_PICTURE_STATE, 0)
+			else
+				set_control_par(%kit_msk_id[$SNARE_ID], $CONTROL_PAR_PICTURE_STATE, 1)
+			end if
+			set_control_par_str(%kit_tr_id[$SNARE_ID],$CONTROL_PAR_PICTURE,"NID_kit_b_snare1")
+			set_control_par(%kit_tr_id[$SNARE_ID],$CONTROL_PAR_POS_X,171)
+			set_control_par(%kit_tr_id[$SNARE_ID],$CONTROL_PAR_POS_Y,185)
+		else
+			if (pgs_get_key_val(INSTRUMENT_PURGE_STATE, $SNARE_ID) = 0)
+				set_control_par(%kit_msk_id[$SNARE_ID], $CONTROL_PAR_PICTURE_STATE, 2)
+			else
+				set_control_par(%kit_msk_id[$SNARE_ID], $CONTROL_PAR_PICTURE_STATE, 3)
+			end if
+			set_control_par_str(%kit_tr_id[$SNARE_ID],$CONTROL_PAR_PICTURE,"NID_kit_b_snare2")
+			set_control_par(%kit_tr_id[$SNARE_ID],$CONTROL_PAR_POS_X,172)
+			set_control_par(%kit_tr_id[$SNARE_ID],$CONTROL_PAR_POS_Y,191)
+		end if
+		{/Init}
+	{/Control Group "Kit}
+		
+		
+	
+	{Control Group "Panel"}
+		declare const $SENDS_RANGE_MAX := 795000
+		declare const $SENDS_CURVE_FIRST_POINT_X := 2 * $SENDS_RANGE_MAX / 8	{2/8 of the range}
+		declare const $SENDS_CURVE_SECOND_POINT_X := 4 * $SENDS_RANGE_MAX / 8	{6/8 of the range}
+		declare const $SENDS_CURVE_FIRST_POINT_Y := 5 * $SENDS_RANGE_MAX / 8	{5/8 of the range}
+		declare const $SENDS_CURVE_SECOND_POINT_Y := 7 * $SENDS_RANGE_MAX / 8	{7/8 of the range}
+		
+		declare $sends_temp
+	
+		{declarations}
+		declare ui_menu $load_instrument
+		declare ui_menu $instruments
+		declare ui_slider $oh_mix (0, $SENDS_RANGE_MAX)
+		declare ui_slider $room_mix (0, $SENDS_RANGE_MAX)
+		declare ui_slider $tune (402778, 597222)	{-7 / +7 steps}
+		declare ui_slider $attack (0, 750000)
+		declare ui_slider $hold (0, 1000000)
+		declare ui_slider $decay (100000, 1000000)
+		{/declarations}
+
+		make_instr_persistent($instruments)
+		
+		{ui_ids}
+		declare %panel_id[8]
+		%panel_id[0] := get_ui_id($load_instrument)
+		%panel_id[1] := get_ui_id($instruments)
+		%panel_id[2] := get_ui_id($oh_mix)
+		%panel_id[3] := get_ui_id($room_mix)
+		%panel_id[4] := get_ui_id($tune)
+		%panel_id[5] := get_ui_id($attack)
+		%panel_id[6] := get_ui_id($hold)
+		%panel_id[7] := get_ui_id($decay)
+		{/ui_ids}
+		
+		{Help Text}
+		set_control_par_str(%panel_id[0],$CONTROL_PAR_HELP,"Load/Unload Instrument: Click here to load/unload the currently selected instrument from memory.")
+		set_control_par_str(%panel_id[1],$CONTROL_PAR_HELP,"Instrument: Use this menu to select instrument to be edited.")
+		set_control_par_str(%panel_id[2],$CONTROL_PAR_HELP,"Overhead Mix: Controls the volume level of the selected drum in the Overhead Mic(s) mix (dB).")
+		set_control_par_str(%panel_id[3],$CONTROL_PAR_HELP,"Room: Controls the volume level of the selected drum in the Room Mic(s) mix (dB).")
+		set_control_par_str(%panel_id[4],$CONTROL_PAR_HELP,"Tune: Use this control to shift the pitch of the selected instrument and all associated microphones for that instrument.")
+		set_control_par_str(%panel_id[5],$CONTROL_PAR_HELP,"Attack: Adjusts the Attack time of the selected instrument's volume envelope")
+		set_control_par_str(%panel_id[6],$CONTROL_PAR_HELP,"Hold: Adjusts the Hold time of the selected instrument's volume envelope")
+		set_control_par_str(%panel_id[7],$CONTROL_PAR_HELP,"Decay: Adjusts the Decay time of the selected instrument's volume envelope")
+		{/Help Text}
+		
+		{Automation}
+		set_control_par(%panel_id[2],$CONTROL_PAR_ALLOW_AUTOMATION,0)
+		set_control_par(%panel_id[3],$CONTROL_PAR_ALLOW_AUTOMATION,0)
+		set_control_par(%panel_id[4],$CONTROL_PAR_ALLOW_AUTOMATION,0)
+		set_control_par(%panel_id[5],$CONTROL_PAR_ALLOW_AUTOMATION,0)
+		set_control_par(%panel_id[6],$CONTROL_PAR_ALLOW_AUTOMATION,0)
+		set_control_par(%panel_id[7],$CONTROL_PAR_ALLOW_AUTOMATION,0)
+		{/Automation}
+		
+		{Default Values}
+		set_control_par(%panel_id[2], $CONTROL_PAR_DEFAULT_VALUE, $SENDS_RANGE_MAX / 2)
+		set_control_par(%panel_id[3], $CONTROL_PAR_DEFAULT_VALUE, $SENDS_RANGE_MAX / 2)
+		set_control_par(%panel_id[4], $CONTROL_PAR_DEFAULT_VALUE, 500000)
+		set_control_par(%panel_id[5], $CONTROL_PAR_DEFAULT_VALUE, 0)
+		set_control_par(%panel_id[6], $CONTROL_PAR_DEFAULT_VALUE, 1000000)
+		set_control_par(%panel_id[7], $CONTROL_PAR_DEFAULT_VALUE, 585723)
+		{/Default Values}
+		
+		{Pictures}
+		set_control_par_str(%panel_id[0],$CONTROL_PAR_PICTURE,"NID_kit_dropdown_unload_chip_normal")
+		set_control_par_str(%panel_id[1],$CONTROL_PAR_PICTURE,"NID_kit_dropdown_instrument_kick")
+		set_control_par_str(%panel_id[2],$CONTROL_PAR_PICTURE,"NID_mixer_knb_black91")
+		set_control_par_str(%panel_id[3],$CONTROL_PAR_PICTURE,"NID_mixer_knb_black91")
+		set_control_par_str(%panel_id[4],$CONTROL_PAR_PICTURE,"NID_mixer_knb_black91")
+		set_control_par_str(%panel_id[5],$CONTROL_PAR_PICTURE,"NID_mixer_knb_black91")
+		set_control_par_str(%panel_id[6],$CONTROL_PAR_PICTURE,"NID_mixer_knb_black91")
+		set_control_par_str(%panel_id[7],$CONTROL_PAR_PICTURE,"NID_mixer_knb_black91")
+		{/Pictures}
+
+		{Mouse Behaviour}
+		set_control_par(%panel_id[2], $CONTROL_PAR_MOUSE_BEHAVIOUR, -500)
+		set_control_par(%panel_id[3], $CONTROL_PAR_MOUSE_BEHAVIOUR, -500)
+		set_control_par(%panel_id[4], $CONTROL_PAR_MOUSE_BEHAVIOUR, -500)
+		set_control_par(%panel_id[5], $CONTROL_PAR_MOUSE_BEHAVIOUR, -500)
+		set_control_par(%panel_id[6], $CONTROL_PAR_MOUSE_BEHAVIOUR, -500)
+		set_control_par(%panel_id[7], $CONTROL_PAR_MOUSE_BEHAVIOUR, -500)
+		{/Mouse Behaviour}
+		
+		{Font IDs & Text Position}
+		set_control_par(%panel_id[0], $CONTROL_PAR_TEXTPOS_Y,15)
+		set_control_par(%panel_id[1], $CONTROL_PAR_FONT_TYPE, $FONT_2_ID)
+		set_control_par(%panel_id[1], $CONTROL_PAR_TEXTPOS_Y,13)
+		set_control_par(%panel_id[1], $CONTROL_PAR_TEXT_ALIGNMENT, 1)
+		{/Font IDs & Text Position}
+		
+		{Position}
+		set_control_par(%panel_id[0],$CONTROL_PAR_POS_X,136)
+		set_control_par(%panel_id[0],$CONTROL_PAR_POS_Y,432)
+		
+		set_control_par(%panel_id[1],$CONTROL_PAR_POS_X,33)
+		set_control_par(%panel_id[1],$CONTROL_PAR_POS_Y,451)
+		
+		set_control_par(%panel_id[2],$CONTROL_PAR_POS_X,209)
+		set_control_par(%panel_id[2],$CONTROL_PAR_POS_Y,449)
+		
+		set_control_par(%panel_id[3],$CONTROL_PAR_POS_X,269)
+		set_control_par(%panel_id[3],$CONTROL_PAR_POS_Y,449)
+		
+		set_control_par(%panel_id[4],$CONTROL_PAR_POS_X,349)
+		set_control_par(%panel_id[4],$CONTROL_PAR_POS_Y,449)
+		
+		set_control_par(%panel_id[5],$CONTROL_PAR_POS_X,428)
+		set_control_par(%panel_id[5],$CONTROL_PAR_POS_Y,449)
+
+		set_control_par(%panel_id[6],$CONTROL_PAR_POS_X,488)
+		set_control_par(%panel_id[6],$CONTROL_PAR_POS_Y,449)
+		
+		set_control_par(%panel_id[7],$CONTROL_PAR_POS_X,548)
+		set_control_par(%panel_id[7],$CONTROL_PAR_POS_Y,449)
+		{/Position}
+		
+		{Size}		
+		set_control_par(%panel_id[0],$CONTROL_PAR_WIDTH,32)
+		set_control_par(%panel_id[0],$CONTROL_PAR_HEIGHT,19)
+		
+		set_control_par(%panel_id[1],$CONTROL_PAR_WIDTH,135)
+		set_control_par(%panel_id[1],$CONTROL_PAR_HEIGHT,40)
+		{/Size}
+		
+		add_menu_item($load_instrument, "Unload Instrument", 0)
+		
+		$count_1 := 0
+		while ($count_1 < 20)
+			if (%NUM_DIR_MICS[$count_1] > -1)
+				add_menu_item($instruments, !INSTRUMENT_NAMES[$count_1]  & " ", $count_1)
+			end if
+			inc($count_1)
+		end while
+		
+		if (pgs_get_key_val(ACTIVE_SNARE, 0) = 0)
+			$snare_a := 1
+			$snare_b := 0
+		else
+			$snare_a := 0
+			$snare_b := 1
+		end if
+		
+		if (pgs_get_key_val(INSTRUMENT_PURGE_STATE, $instruments) = 0)
+			set_menu_item_str(%panel_id[0], 0, "Load Instrument")
+			set_control_par_str(%panel_id[0],$CONTROL_PAR_PICTURE,"NID_kit_dropdown_unload_chip_red")
+		else
+			set_menu_item_str(%panel_id[0], 0, "Unload Instrument")
+			set_control_par_str(%panel_id[0],$CONTROL_PAR_PICTURE,"NID_kit_dropdown_unload_chip_normal")
+		end if
+		
+		set_control_par_str(%panel_id[1], $CONTROL_PAR_PICTURE, !INSTRUMENT_PICS[$instruments])
+
+		$tune := get_engine_par($ENGINE_PAR_TUNE, %GROUP_DATA[%INSTRUMENT_OFFSET[$instruments] * 8 + 4], -1, -1)
+
+		$sends_temp := get_engine_par($ENGINE_PAR_VOLUME, %GROUP_DATA[%INSTRUMENT_OFFSET[$instruments] * 8 + 4], -1, -1)
+		if ($sends_temp < $SENDS_CURVE_FIRST_POINT_Y)
+			$oh_mix := 2 * $sends_temp / 5
+		else
+			$oh_mix := 2 * $sends_temp - 4 * $SENDS_CURVE_FIRST_POINT_X
+		end if
+		
+		$sends_temp := get_engine_par($ENGINE_PAR_VOLUME, %GROUP_DATA[%INSTRUMENT_OFFSET[$instruments] * 8 + 5], -1, -1)
+		if ($sends_temp < $SENDS_CURVE_FIRST_POINT_Y)
+			$room_mix := 2 * $sends_temp / 5
+		else
+			$room_mix := 2 * $sends_temp - 4 * $SENDS_CURVE_FIRST_POINT_X
+		end if
+		
+		$attack := get_engine_par($ENGINE_PAR_ATTACK, %GROUP_DATA[%INSTRUMENT_OFFSET[$instruments] * 8 + 4],...
+														find_mod(%GROUP_DATA[%INSTRUMENT_OFFSET[$instruments] * 8 + 4], "ENV_AHDSR"), -1)
+														
+		$hold := get_engine_par($ENGINE_PAR_HOLD, %GROUP_DATA[%INSTRUMENT_OFFSET[$instruments] * 8 + 4],...
+														find_mod(%GROUP_DATA[%INSTRUMENT_OFFSET[$instruments] * 8 + 4], "ENV_AHDSR"), -1)
+		$decay := get_engine_par($ENGINE_PAR_DECAY, %GROUP_DATA[%INSTRUMENT_OFFSET[$instruments] * 8 + 4],...
+														find_mod(%GROUP_DATA[%INSTRUMENT_OFFSET[$instruments] * 8 + 4], "ENV_AHDSR"), -1)
+
+		
+		
+		set_control_par_str(%panel_id[4],$CONTROL_PAR_LABEL,get_engine_par_disp($ENGINE_PAR_TUNE,...
+										%GROUP_DATA[%INSTRUMENT_OFFSET[$instruments] * 8 + 4], -1, -1) & "")
+		set_control_par_str(%panel_id[2],$CONTROL_PAR_LABEL,get_engine_par_disp($ENGINE_PAR_VOLUME,...
+										%GROUP_DATA[%INSTRUMENT_OFFSET[$instruments] * 8 + 4], -1, -1) & "dB")
+		set_control_par_str(%panel_id[3],$CONTROL_PAR_LABEL,get_engine_par_disp($ENGINE_PAR_VOLUME,...
+										%GROUP_DATA[%INSTRUMENT_OFFSET[$instruments] * 8 + 5], -1, -1) & "dB")
+		set_control_par_str(%panel_id[5],$CONTROL_PAR_LABEL,get_engine_par_disp($ENGINE_PAR_ATTACK,...
+										%GROUP_DATA[%INSTRUMENT_OFFSET[$instruments] * 8 + 4],...
+												find_mod(%GROUP_DATA[%INSTRUMENT_OFFSET[$instruments] * 8 + 4], "ENV_AHDSR"), -1) & " ms")
+		set_control_par_str(%panel_id[6],$CONTROL_PAR_LABEL,get_engine_par_disp($ENGINE_PAR_HOLD,...
+										%GROUP_DATA[%INSTRUMENT_OFFSET[$instruments] * 8 + 4],...
+												find_mod(%GROUP_DATA[%INSTRUMENT_OFFSET[$instruments] * 8 + 4], "ENV_AHDSR"), -1) & " ms")
+		set_control_par_str(%panel_id[7],$CONTROL_PAR_LABEL,get_engine_par_disp($ENGINE_PAR_DECAY,...
+										%GROUP_DATA[%INSTRUMENT_OFFSET[$instruments] * 8 + 4],...
+												find_mod(%GROUP_DATA[%INSTRUMENT_OFFSET[$instruments] * 8 + 4], "ENV_AHDSR"), -1) & " ms")
+end on
+
+function gui_update
+	$prev_instrument := $instruments
+	
+	if (pgs_get_key_val(INSTRUMENT_PURGE_STATE, $instruments) = 0)
+		set_menu_item_str(%panel_id[0], 0, "Load Instrument")
+		set_control_par_str(%panel_id[0],$CONTROL_PAR_PICTURE,"NID_kit_dropdown_unload_chip_red")
+	else
+		set_menu_item_str(%panel_id[0], 0, "Unload Instrument")
+		set_control_par_str(%panel_id[0],$CONTROL_PAR_PICTURE,"NID_kit_dropdown_unload_chip_normal")
+	end if
+	
+	if ($instruments = $SNARE_ID)
+		set_control_par(%kit_sn_id[0], $CONTROL_PAR_HIDE, $HIDE_PART_NOTHING)
+		set_control_par(%kit_sn_id[1], $CONTROL_PAR_HIDE, $HIDE_PART_NOTHING)
+	else
+		set_control_par(%kit_sn_id[0], $CONTROL_PAR_HIDE, $HIDE_WHOLE_CONTROL)
+		set_control_par(%kit_sn_id[1], $CONTROL_PAR_HIDE, $HIDE_WHOLE_CONTROL)
+	end if
+
+	set_control_par(%kit_sel_id[$instruments], $CONTROL_PAR_VALUE, 1)
+
+	set_control_par_str(%panel_id[1], $CONTROL_PAR_PICTURE, !INSTRUMENT_PICS[$instruments])
+
+	$tune := get_engine_par($ENGINE_PAR_TUNE, %GROUP_DATA[%INSTRUMENT_OFFSET[$instruments] * 8 + 4], -1, -1)
+
+	$sends_temp := get_engine_par($ENGINE_PAR_VOLUME, %GROUP_DATA[%INSTRUMENT_OFFSET[$instruments] * 8 + 4], -1, -1)
+	if ($sends_temp < $SENDS_CURVE_FIRST_POINT_Y)
+		$oh_mix := 2 * $sends_temp / 5
+	else
+		$oh_mix := 2 * $sends_temp - 4 * $SENDS_CURVE_FIRST_POINT_X
+	end if
+	
+	$sends_temp := get_engine_par($ENGINE_PAR_VOLUME, %GROUP_DATA[%INSTRUMENT_OFFSET[$instruments] * 8 + 5], -1, -1)
+	if ($sends_temp < $SENDS_CURVE_FIRST_POINT_Y)
+		$room_mix := 2 * $sends_temp / 5
+	else
+		$room_mix := 2 * $sends_temp - 4 * $SENDS_CURVE_FIRST_POINT_X
+	end if
+	
+	$attack := get_engine_par($ENGINE_PAR_ATTACK, %GROUP_DATA[%INSTRUMENT_OFFSET[$instruments] * 8 + 4],...
+													find_mod(%GROUP_DATA[%INSTRUMENT_OFFSET[$instruments] * 8 + 4], "ENV_AHDSR"), -1)
+													
+	$hold := get_engine_par($ENGINE_PAR_HOLD, %GROUP_DATA[%INSTRUMENT_OFFSET[$instruments] * 8 + 4],...
+													find_mod(%GROUP_DATA[%INSTRUMENT_OFFSET[$instruments] * 8 + 4], "ENV_AHDSR"), -1)
+	$decay := get_engine_par($ENGINE_PAR_DECAY, %GROUP_DATA[%INSTRUMENT_OFFSET[$instruments] * 8 + 4],...
+													find_mod(%GROUP_DATA[%INSTRUMENT_OFFSET[$instruments] * 8 + 4], "ENV_AHDSR"), -1)
+
+	
+	
+	set_control_par_str(%panel_id[4],$CONTROL_PAR_LABEL,get_engine_par_disp($ENGINE_PAR_TUNE,...
+									%GROUP_DATA[%INSTRUMENT_OFFSET[$instruments] * 8 + 4], -1, -1) & "")
+	set_control_par_str(%panel_id[2],$CONTROL_PAR_LABEL,get_engine_par_disp($ENGINE_PAR_VOLUME,...
+									%GROUP_DATA[%INSTRUMENT_OFFSET[$instruments] * 8 + 4], -1, -1) & "dB")
+	set_control_par_str(%panel_id[3],$CONTROL_PAR_LABEL,get_engine_par_disp($ENGINE_PAR_VOLUME,...
+									%GROUP_DATA[%INSTRUMENT_OFFSET[$instruments] * 8 + 5], -1, -1) & "dB")
+	set_control_par_str(%panel_id[5],$CONTROL_PAR_LABEL,get_engine_par_disp($ENGINE_PAR_ATTACK,...
+									%GROUP_DATA[%INSTRUMENT_OFFSET[$instruments] * 8 + 4],...
+											find_mod(%GROUP_DATA[%INSTRUMENT_OFFSET[$instruments] * 8 + 4], "ENV_AHDSR"), -1) & " ms")
+	set_control_par_str(%panel_id[6],$CONTROL_PAR_LABEL,get_engine_par_disp($ENGINE_PAR_HOLD,...
+									%GROUP_DATA[%INSTRUMENT_OFFSET[$instruments] * 8 + 4],...
+											find_mod(%GROUP_DATA[%INSTRUMENT_OFFSET[$instruments] * 8 + 4], "ENV_AHDSR"), -1) & " ms")
+	set_control_par_str(%panel_id[7],$CONTROL_PAR_LABEL,get_engine_par_disp($ENGINE_PAR_DECAY,...
+									%GROUP_DATA[%INSTRUMENT_OFFSET[$instruments] * 8 + 4],...
+											find_mod(%GROUP_DATA[%INSTRUMENT_OFFSET[$instruments] * 8 + 4], "ENV_AHDSR"), -1) & " ms")
+end function
+
+function instrument_select
+	if (pgs_get_key_val(AUDITION, 0) = 1 and pgs_get_key_val(INSTRUMENT_PURGE_STATE, $instruments) = 1)
+		$count_1 := %INSTRUMENT_OFFSET[$instruments]
+		while (%KEY_USED[$count_1] # 1)
+			inc($count_1)
+		end while
+		play_note($count_1, 100, 0, 0)
+		
+		if (pgs_get_key_val(SHOW_TRIGGERS, 0) = 1)
+			set_control_par(%kit_tr_id[%note_instruments[$count_1]], $CONTROL_PAR_PICTURE_STATE, 0)
+			wait($TRIGGER_WAIT_TIME)
+			set_control_par(%kit_tr_id[%note_instruments[$count_1]], $CONTROL_PAR_PICTURE_STATE, 1)
+		end if
+	end if
+end function
+
+on note
+
+	if ($select_by_midi = 1 and get_event_par($EVENT_ID, $EVENT_PAR_SOURCE) # 0)
+		if ($instruments # %note_instruments[$EVENT_NOTE])
+			set_control_par(%kit_sel_id[$instruments], $CONTROL_PAR_VALUE, 0)
+			$instruments := %note_instruments[$EVENT_NOTE]
+			call gui_update
+		end if
+	end if
+	
+	if ($loading_flag = 1)
+		ignore_event($EVENT_ID)
+		exit
+	end if
+
+	if (pgs_get_key_val(SHOW_TRIGGERS, 0) = 1)
+		if (pgs_get_key_val(INSTRUMENT_PURGE_STATE, %note_instruments[$EVENT_NOTE]) = 1)
+			set_control_par(%kit_tr_id[%note_instruments[$EVENT_NOTE]], $CONTROL_PAR_PICTURE_STATE, 0)
+			wait($TRIGGER_WAIT_TIME)
+			set_control_par(%kit_tr_id[%note_instruments[$EVENT_NOTE]], $CONTROL_PAR_PICTURE_STATE, 1)
+		end if
+	end if
+end on
+
+on release
+	if ($EVENT_NOTE = 13)
+		if ($EVENT_VELOCITY < 90)
+			play_note(4, $EVENT_VELOCITY, 0, 0)
+		else
+			play_note(4, 90, 0, 0)
+		end if
+	end if
+end on
+
+
+
+on ui_control ($select_by_midi)
+	$sel_by_midi_flag := $select_by_midi	
+end on
+
+
+on ui_control ($kick_sel)
+	set_control_par(%kit_sel_id[$instruments], $CONTROL_PAR_VALUE, 0)
+	$instruments := $KICK_ID
+	call gui_update
+	call instrument_select
+end on
+
+on ui_control ($snare_sel)
+	set_control_par(%kit_sel_id[$instruments], $CONTROL_PAR_VALUE, 0)
+	$instruments := $SNARE_ID
+	call gui_update
+	call instrument_select
+end on
+
+on ui_control ($hh_sel)
+	set_control_par(%kit_sel_id[$instruments], $CONTROL_PAR_VALUE, 0)
+	$instruments := $HH_ID
+	call gui_update
+	call instrument_select
+end on
+
+on ui_control ($tom1_sel)
+	set_control_par(%kit_sel_id[$instruments], $CONTROL_PAR_VALUE, 0)
+	$instruments := $TOM1_ID
+	call gui_update
+	call instrument_select
+end on
+
+on ui_control ($tom2_sel)
+	set_control_par(%kit_sel_id[$instruments], $CONTROL_PAR_VALUE, 0)
+	$instruments := $TOM2_ID
+	call gui_update
+	call instrument_select
+end on
+
+on ui_control ($tom3_sel)
+	set_control_par(%kit_sel_id[$instruments], $CONTROL_PAR_VALUE, 0)
+	$instruments := $TOM3_ID
+	call gui_update
+	call instrument_select
+end on
+
+on ui_control ($tom4_sel)
+	set_control_par(%kit_sel_id[$instruments], $CONTROL_PAR_VALUE, 0)
+	$instruments := $TOM4_ID
+	call gui_update
+	call instrument_select
+end on
+
+on ui_control ($tom5_sel)
+	set_control_par(%kit_sel_id[$instruments], $CONTROL_PAR_VALUE, 0)
+	$instruments := $TOM5_ID
+	call gui_update
+	call instrument_select
+end on
+
+on ui_control ($cymb1_sel)
+	set_control_par(%kit_sel_id[$instruments], $CONTROL_PAR_VALUE, 0)
+	$instruments := $CYMB1_ID
+	call gui_update
+	call instrument_select
+end on
+
+on ui_control ($cymb2_sel)
+	set_control_par(%kit_sel_id[$instruments], $CONTROL_PAR_VALUE, 0)
+	$instruments := $CYMB2_ID
+	call gui_update
+	call instrument_select
+end on
+
+on ui_control ($cymb3_sel)
+	set_control_par(%kit_sel_id[$instruments], $CONTROL_PAR_VALUE, 0)
+	$instruments := $CYMB3_ID
+	call gui_update
+	call instrument_select
+end on
+
+on ui_control ($cymb4_sel)
+	set_control_par(%kit_sel_id[$instruments], $CONTROL_PAR_VALUE, 0)
+	$instruments := $CYMB4_ID
+	call gui_update
+	call instrument_select
+end on
+
+on ui_control ($cymb5_sel)
+	set_control_par(%kit_sel_id[$instruments], $CONTROL_PAR_VALUE, 0)
+	$instruments := $CYMB5_ID
+	call gui_update
+	call instrument_select
+end on
+
+on ui_control ($cymb6_sel)
+	set_control_par(%kit_sel_id[$instruments], $CONTROL_PAR_VALUE, 0)
+	$instruments := $CYMB6_ID
+	call gui_update
+	call instrument_select
+end on
+
+on ui_control ($cymb7_sel)
+	set_control_par(%kit_sel_id[$instruments], $CONTROL_PAR_VALUE, 0)
+	$instruments := $CYMB7_ID
+	call gui_update
+	call instrument_select
+end on
+
+on ui_control ($perc1_sel)
+	set_control_par(%kit_sel_id[$instruments], $CONTROL_PAR_VALUE, 0)
+	$instruments := $PERC1_ID
+	call gui_update
+	call instrument_select
+end on
+
+on ui_control ($perc2_sel)
+	set_control_par(%kit_sel_id[$instruments], $CONTROL_PAR_VALUE, 0)
+	$instruments := $PERC2_ID
+	call gui_update
+	call instrument_select
+end on
+
+on ui_control ($perc3_sel)
+	set_control_par(%kit_sel_id[$instruments], $CONTROL_PAR_VALUE, 0)
+	$instruments := $PERC3_ID
+	call gui_update
+	call instrument_select
+end on
+
+on ui_control ($perc4_sel)
+	set_control_par(%kit_sel_id[$instruments], $CONTROL_PAR_VALUE, 0)
+	$instruments := $PERC4_ID
+	call gui_update
+	call instrument_select
+end on
+
+on ui_control ($perc5_sel)
+	set_control_par(%kit_sel_id[$instruments], $CONTROL_PAR_VALUE, 0)
+	$instruments := $PERC5_ID
+	call gui_update
+	call instrument_select
+end on
+
+on ui_control ($load_instrument)
+	fade_out($ALL_EVENTS, 100000, 1)
+	$loading_flag := 1
+	wait(100000)
+	if (pgs_get_key_val(INSTRUMENT_PURGE_STATE, $instruments) = 0)
+		set_control_par(%kit_msk_id[$instruments], $CONTROL_PAR_PICTURE_STATE, 1)
+	
+		{load shit}
+		$count_1 := %INSTRUMENT_OFFSET[$instruments]
+		while ($count_1 < %INSTRUMENT_OFFSET[$instruments + 1])
+			if (%instr_channel[$instruments] # -1)
+				if (pgs_get_key_val(CHANNEL_PURGE_STATE, %instr_channel[$instruments]) = 1)
+					if (%GROUP_DATA[$count_1 * 8] # -1)
+						purge_group(%GROUP_DATA[$count_1 * 8], 1)
+					end if
+					if (%GROUP_DATA[$count_1 * 8 + 1] # -1)
+						purge_group(%GROUP_DATA[$count_1 * 8 + 1], 1)
+					end if
+					if (%GROUP_DATA[$count_1 * 8 + 2] # -1)
+						purge_group(%GROUP_DATA[$count_1 * 8 + 2], 1)
+					end if
+				end if
+			end if
+			if (pgs_get_key_val(CHANNEL_PURGE_STATE, %instr_channel[$SNARE_ID]) = 1)
+				if (%GROUP_DATA[$count_1 * 8 + 3] # -1)
+					purge_group(%GROUP_DATA[$count_1 * 8 + 3], 1)
+				end if
+			end if
+			if (pgs_get_key_val(CHANNEL_PURGE_STATE, 9) = 1)
+				if (%GROUP_DATA[$count_1 * 8 + 4] # -1)
+					purge_group(%GROUP_DATA[$count_1 * 8 + 4], 1)
+				end if
+			end if
+			if (pgs_get_key_val(CHANNEL_PURGE_STATE, 10) = 1)
+				if (%GROUP_DATA[$count_1 * 8 + 5] # -1)
+					purge_group(%GROUP_DATA[$count_1 * 8 + 5], 1)
+				end if
+			end if
+			if (pgs_get_key_val(CHANNEL_PURGE_STATE, 11) = 1)
+				if (%GROUP_DATA[$count_1 * 8 + 6] # -1)
+					purge_group(%GROUP_DATA[$count_1 * 8 + 6], 1)
+				end if
+			end if
+			if (pgs_get_key_val(CHANNEL_PURGE_STATE, 12) = 1)
+				if (%GROUP_DATA[$count_1 * 8 + 7] # -1)
+					purge_group(%GROUP_DATA[$count_1 * 8 + 7], 1)
+				end if
+			end if
+			inc($count_1)
+		end while
+		
+		if ($instruments = $SNARE_ID and pgs_get_key_val(ACTIVE_SNARE, 0) = 1)
+			set_control_par(%kit_msk_id[$instruments], $CONTROL_PAR_PICTURE_STATE, 3)
+			$count_1 := %INSTRUMENT_OFFSET[$instruments]
+			while ($count_1 < %INSTRUMENT_OFFSET[$instruments + 1])
+				if (pgs_get_key_val(CHANNEL_PURGE_STATE, %instr_channel[$instruments]) = 1)
+					if (%GROUP_DATA[$count_1 * 8] # -1)
+						purge_group(%GROUP_DATA[$count_1 * 8], 0)
+						purge_group(%GROUP_DATA[$count_1 * 8] + 1, 1)
+					end if
+					if (%GROUP_DATA[$count_1 * 8 + 1] # -1)
+						purge_group(%GROUP_DATA[$count_1 * 8 + 1], 0)
+						purge_group(%GROUP_DATA[$count_1 * 8 + 1] + 1, 1)
+					end if
+					if (%GROUP_DATA[$count_1 * 8 + 2] # -1)
+						purge_group(%GROUP_DATA[$count_1 * 8 + 2], 0)
+						purge_group(%GROUP_DATA[$count_1 * 8 + 2] + 1, 1)
+					end if
+				end if
+				if (pgs_get_key_val(CHANNEL_PURGE_STATE, 9) = 1)
+					if (%GROUP_DATA[$count_1 * 8 + 4] # -1)
+						purge_group(%GROUP_DATA[$count_1 * 8 + 4], 0)
+						purge_group(%GROUP_DATA[$count_1 * 8 + 4] + 1, 1)
+					end if
+				end if
+				if (pgs_get_key_val(CHANNEL_PURGE_STATE, 10) = 1)
+					if (%GROUP_DATA[$count_1 * 8 + 5] # -1)
+						purge_group(%GROUP_DATA[$count_1 * 8 + 5], 0)
+						purge_group(%GROUP_DATA[$count_1 * 8 + 5] + 1, 1)
+					end if
+				end if
+				if (pgs_get_key_val(CHANNEL_PURGE_STATE, 11) = 1)
+					if (%GROUP_DATA[$count_1 * 8 + 6] # -1)
+						purge_group(%GROUP_DATA[$count_1 * 8 + 6], 0)
+						purge_group(%GROUP_DATA[$count_1 * 8 + 6] + 1, 1)
+					end if
+				end if
+				if (pgs_get_key_val(CHANNEL_PURGE_STATE, 12) = 1)
+					if (%GROUP_DATA[$count_1 * 8 + 7] # -1)
+						purge_group(%GROUP_DATA[$count_1 * 8 + 7], 0)
+						purge_group(%GROUP_DATA[$count_1 * 8 + 7] + 1, 1)
+					end if
+				end if
+				inc($count_1)
+			end while
+		end if
+		{/load shit}
+
+		%instrument_purge_state[$instruments] := 1
+		pgs_set_key_val(ACTION_TYPE, 0, -1)
+		pgs_set_key_val(INSTRUMENT_PURGE_STATE, $instruments, 1)
+	else
+		set_control_par(%kit_msk_id[$instruments], $CONTROL_PAR_PICTURE_STATE, 0)
+	
+		{unload shit}		
+		if ($instruments = $SNARE_ID and pgs_get_key_val(ACTIVE_SNARE, 0) = 1)
+			set_control_par(%kit_msk_id[$instruments], $CONTROL_PAR_PICTURE_STATE, 2)
+			$count_1 := %INSTRUMENT_OFFSET[$instruments]
+			while ($count_1 < %INSTRUMENT_OFFSET[$instruments + 1])
+				if (pgs_get_key_val(CHANNEL_PURGE_STATE, %instr_channel[$instruments]) = 1)
+					if (%GROUP_DATA[$count_1 * 8] # -1)
+						purge_group(%GROUP_DATA[$count_1 * 8] + 1, 0)
+					end if
+					if (%GROUP_DATA[$count_1 * 8 + 1] # -1)
+						purge_group(%GROUP_DATA[$count_1 * 8 + 1] + 1, 0)
+					end if
+					if (%GROUP_DATA[$count_1 * 8 + 2] # -1)
+						purge_group(%GROUP_DATA[$count_1 * 8 + 2] + 1, 0)
+					end if
+				end if
+				if (pgs_get_key_val(CHANNEL_PURGE_STATE, %instr_channel[$SNARE_ID]) = 1)
+					if (%GROUP_DATA[$count_1 * 8 + 3] # -1)
+						purge_group(%GROUP_DATA[$count_1 * 8 + 3] + 1, 0)
+					end if
+				end if
+				if (pgs_get_key_val(CHANNEL_PURGE_STATE, 9) = 1)
+					if (%GROUP_DATA[$count_1 * 8 + 4] # -1)
+						purge_group(%GROUP_DATA[$count_1 * 8 + 4] + 1, 0)
+					end if
+				end if
+				if (pgs_get_key_val(CHANNEL_PURGE_STATE, 10) = 1)
+					if (%GROUP_DATA[$count_1 * 8 + 5] # -1)
+						purge_group(%GROUP_DATA[$count_1 * 8 + 5] + 1, 0)
+					end if
+				end if
+				if (pgs_get_key_val(CHANNEL_PURGE_STATE, 11) = 1)
+					if (%GROUP_DATA[$count_1 * 8 + 6] # -1)
+						purge_group(%GROUP_DATA[$count_1 * 8 + 6] + 1, 0)
+					end if
+				end if
+				if (pgs_get_key_val(CHANNEL_PURGE_STATE, 12) = 1)
+					if (%GROUP_DATA[$count_1 * 8 + 7] # -1)
+						purge_group(%GROUP_DATA[$count_1 * 8 + 7] + 1, 0)
+					end if
+				end if
+				inc($count_1)
+			end while
+		else
+			$count_1 := %INSTRUMENT_OFFSET[$instruments]
+			while ($count_1 < %INSTRUMENT_OFFSET[$instruments + 1])
+				if (%instr_channel[$instruments] # -1)
+					if (pgs_get_key_val(CHANNEL_PURGE_STATE, %instr_channel[$instruments]) = 1)
+						if (%GROUP_DATA[$count_1 * 8] # -1)
+							purge_group(%GROUP_DATA[$count_1 * 8], 0)
+						end if
+						if (%GROUP_DATA[$count_1 * 8 + 1] # -1)
+							purge_group(%GROUP_DATA[$count_1 * 8 + 1], 0)
+						end if
+						if (%GROUP_DATA[$count_1 * 8 + 2] # -1)
+							purge_group(%GROUP_DATA[$count_1 * 8 + 2], 0)
+						end if
+					end if
+				end if
+				if (pgs_get_key_val(CHANNEL_PURGE_STATE, %instr_channel[$SNARE_ID]) = 1)
+					if (%GROUP_DATA[$count_1 * 8 + 3] # -1)
+						purge_group(%GROUP_DATA[$count_1 * 8 + 3], 0)
+					end if
+				end if
+				if (pgs_get_key_val(CHANNEL_PURGE_STATE, 9) = 1)
+					if (%GROUP_DATA[$count_1 * 8 + 4] # -1)
+						purge_group(%GROUP_DATA[$count_1 * 8 + 4], 0)
+					end if
+				end if
+				if (pgs_get_key_val(CHANNEL_PURGE_STATE, 10) = 1)
+					if (%GROUP_DATA[$count_1 * 8 + 5] # -1)
+						purge_group(%GROUP_DATA[$count_1 * 8 + 5], 0)
+					end if
+				end if
+				if (pgs_get_key_val(CHANNEL_PURGE_STATE, 11) = 1)
+					if (%GROUP_DATA[$count_1 * 8 + 6] # -1)
+						purge_group(%GROUP_DATA[$count_1 * 8 + 6], 0)
+					end if
+				end if
+				if (pgs_get_key_val(CHANNEL_PURGE_STATE, 12) = 1)
+					if (%GROUP_DATA[$count_1 * 8 + 7] # -1)
+						purge_group(%GROUP_DATA[$count_1 * 8 + 7], 0)
+					end if
+				end if
+				inc($count_1)
+			end while
+		end if
+		{/unload shit}
+		%instrument_purge_state[$instruments] := 0
+		pgs_set_key_val(ACTION_TYPE, 0, -1)
+		pgs_set_key_val(INSTRUMENT_PURGE_STATE, $instruments, 0)
+	end if
+	
+	call gui_update
+
+	$loading_flag := 0
+end on
+
+on ui_control ($snare_a)
+	if ($snare_a = 0)
+		$snare_a := 1
+		exit
+	end if
+	
+	fade_out($ALL_EVENTS, 100000, 1)
+	$loading_flag := 1
+	wait(100000)
+	
+	$snare_b := 0
+	
+	if (pgs_get_key_val(INSTRUMENT_PURGE_STATE, $SNARE_ID) = 1)
+		set_control_par(%kit_msk_id[$instruments], $CONTROL_PAR_PICTURE_STATE, 1)
+		$count_1 := %INSTRUMENT_OFFSET[$instruments]
+		while ($count_1 < %INSTRUMENT_OFFSET[$instruments + 1])
+			if (pgs_get_key_val(CHANNEL_PURGE_STATE, %instr_channel[$instruments]) = 1)
+				if (%GROUP_DATA[$count_1 * 8] # -1)
+					purge_group(%GROUP_DATA[$count_1 * 8], 1)
+					purge_group(%GROUP_DATA[$count_1 * 8] + 1, 0)
+				end if
+				if (%GROUP_DATA[$count_1 * 8 + 1] # -1)
+					purge_group(%GROUP_DATA[$count_1 * 8 + 1], 1)
+					purge_group(%GROUP_DATA[$count_1 * 8 + 1] + 1, 0)
+				end if
+				if (%GROUP_DATA[$count_1 * 8 + 2] # -1)
+					purge_group(%GROUP_DATA[$count_1 * 8 + 2], 1)
+					purge_group(%GROUP_DATA[$count_1 * 8 + 2] + 1, 0)
+				end if
+			end if
+			if (pgs_get_key_val(CHANNEL_PURGE_STATE, 9) = 1)
+				if (%GROUP_DATA[$count_1 * 8 + 4] # -1)
+					purge_group(%GROUP_DATA[$count_1 * 8 + 4], 1)
+					purge_group(%GROUP_DATA[$count_1 * 8 + 4] + 1, 0)
+				end if
+			end if
+			if (pgs_get_key_val(CHANNEL_PURGE_STATE, 10) = 1)
+				if (%GROUP_DATA[$count_1 * 8 + 5] # -1)
+					purge_group(%GROUP_DATA[$count_1 * 8 + 5], 1)
+					purge_group(%GROUP_DATA[$count_1 * 8 + 5] + 1, 0)
+				end if
+			end if
+			if (pgs_get_key_val(CHANNEL_PURGE_STATE, 11) = 1)
+				if (%GROUP_DATA[$count_1 * 8 + 6] # -1)
+					purge_group(%GROUP_DATA[$count_1 * 8 + 6], 1)
+					purge_group(%GROUP_DATA[$count_1 * 8 + 6] + 1, 0)
+				end if
+			end if
+			if (pgs_get_key_val(CHANNEL_PURGE_STATE, 12) = 1)
+				if (%GROUP_DATA[$count_1 * 8 + 7] # -1)
+					purge_group(%GROUP_DATA[$count_1 * 8 + 7], 1)
+					purge_group(%GROUP_DATA[$count_1 * 8 + 7] + 1, 0)
+				end if
+			end if
+			inc($count_1)
+		end while
+	else
+		set_control_par(%kit_msk_id[$instruments], $CONTROL_PAR_PICTURE_STATE, 0)
+	end if
+
+	set_control_par_str(%kit_tr_id[$SNARE_ID],$CONTROL_PAR_PICTURE,"NID_kit_b_snare1")
+	set_control_par(%kit_tr_id[$SNARE_ID],$CONTROL_PAR_POS_X,171)
+	set_control_par(%kit_tr_id[$SNARE_ID],$CONTROL_PAR_POS_Y,185)
+	
+	$loading_flag := 0
+	
+	$active_snare := 0
+	pgs_set_key_val(ACTION_TYPE, 0, -1)
+	pgs_set_key_val(ACTIVE_SNARE, 0, 0)
+end on
+
+on ui_control ($snare_b)
+	if ($snare_b = 0)
+		$snare_b := 1
+		exit
+	end if
+	
+	fade_out($ALL_EVENTS, 100000, 1)
+	$loading_flag := 1
+	wait(100000)
+	
+	$snare_a := 0
+	
+	if (pgs_get_key_val(INSTRUMENT_PURGE_STATE, $SNARE_ID) = 1)
+		set_control_par(%kit_msk_id[$instruments], $CONTROL_PAR_PICTURE_STATE, 3)
+		$count_1 := %INSTRUMENT_OFFSET[$instruments]
+		while ($count_1 < %INSTRUMENT_OFFSET[$instruments + 1])
+			if (pgs_get_key_val(CHANNEL_PURGE_STATE, %instr_channel[$instruments]) = 1)
+				if (%GROUP_DATA[$count_1 * 8] # -1)
+					purge_group(%GROUP_DATA[$count_1 * 8], 0)
+					purge_group(%GROUP_DATA[$count_1 * 8] + 1, 1)
+				end if
+				if (%GROUP_DATA[$count_1 * 8 + 1] # -1)
+					purge_group(%GROUP_DATA[$count_1 * 8 + 1], 0)
+					purge_group(%GROUP_DATA[$count_1 * 8 + 1] + 1, 1)
+				end if
+				if (%GROUP_DATA[$count_1 * 8 + 2] # -1)
+					purge_group(%GROUP_DATA[$count_1 * 8 + 2], 0)
+					purge_group(%GROUP_DATA[$count_1 * 8 + 2] + 1, 1)
+				end if
+			end if
+			if (pgs_get_key_val(CHANNEL_PURGE_STATE, 9) = 1)
+				if (%GROUP_DATA[$count_1 * 8 + 4] # -1)
+					purge_group(%GROUP_DATA[$count_1 * 8 + 4], 0)
+					purge_group(%GROUP_DATA[$count_1 * 8 + 4] + 1, 1)
+				end if
+			end if
+			if (pgs_get_key_val(CHANNEL_PURGE_STATE, 10) = 1)
+				if (%GROUP_DATA[$count_1 * 8 + 5] # -1)
+					purge_group(%GROUP_DATA[$count_1 * 8 + 5], 0)
+					purge_group(%GROUP_DATA[$count_1 * 8 + 5] + 1, 1)
+				end if
+			end if
+			if (pgs_get_key_val(CHANNEL_PURGE_STATE, 11) = 1)
+				if (%GROUP_DATA[$count_1 * 8 + 6] # -1)
+					purge_group(%GROUP_DATA[$count_1 * 8 + 6], 0)
+					purge_group(%GROUP_DATA[$count_1 * 8 + 6] + 1, 1)
+				end if
+			end if
+			if (pgs_get_key_val(CHANNEL_PURGE_STATE, 12) = 1)
+				if (%GROUP_DATA[$count_1 * 8 + 7] # -1)
+					purge_group(%GROUP_DATA[$count_1 * 8 + 7], 0)
+					purge_group(%GROUP_DATA[$count_1 * 8 + 7] + 1, 1)
+				end if
+			end if
+			inc($count_1)
+		end while
+	else
+		set_control_par(%kit_msk_id[$instruments], $CONTROL_PAR_PICTURE_STATE, 2)
+	end if
+	
+	set_control_par_str(%kit_tr_id[$SNARE_ID],$CONTROL_PAR_PICTURE,"NID_kit_b_snare2")
+	set_control_par(%kit_tr_id[$SNARE_ID],$CONTROL_PAR_POS_X,172)
+	set_control_par(%kit_tr_id[$SNARE_ID],$CONTROL_PAR_POS_Y,191)
+	
+	$loading_flag := 0
+	
+	$active_snare := 1
+	pgs_set_key_val(ACTION_TYPE, 0, -1)
+	pgs_set_key_val(ACTIVE_SNARE, 0, 1)
+end on
+
+on ui_control ($instruments)
+	if ($prev_instrument # $instruments)
+		set_control_par(%kit_sel_id[$prev_instrument], $CONTROL_PAR_VALUE, 0)
+		call gui_update
+	end if
+end on
+
+on ui_control ($oh_mix)
+	if ($oh_mix < $SENDS_CURVE_FIRST_POINT_X)
+		$sends_temp := 5 * $oh_mix / 2
+	else
+		$sends_temp := ($oh_mix - $SENDS_CURVE_FIRST_POINT_X) / 2 + 5 * $SENDS_CURVE_FIRST_POINT_X / 2
+	end if	
+
+	if ($sends_temp > $SENDS_RANGE_MAX)
+		$sends_temp := $SENDS_RANGE_MAX
+	else
+		if ($sends_temp < 0)
+			$sends_temp:= 0
+		end if
+	end if
+
+	$count_1 := %INSTRUMENT_OFFSET[$instruments]
+	while ($count_1 < %INSTRUMENT_OFFSET[$instruments + 1])
+		if (%GROUP_DATA[$count_1 * 8 + 4] > -1)
+			set_engine_par($ENGINE_PAR_VOLUME, $sends_temp, %GROUP_DATA[$count_1 * 8 + 4], -1, -1)
+			set_engine_par($ENGINE_PAR_VOLUME, $sends_temp, %GROUP_DATA[$count_1 * 8 + 6], -1, -1)
+			if ($instruments = $SNARE_ID)
+				$count_2 := 1
+				while ($count_2 < $NUM_SNARE_INSTRUMENTS)
+					set_engine_par($ENGINE_PAR_VOLUME, $sends_temp, %GROUP_DATA[$count_1 * 8 + 4] + $count_2 , -1, -1)
+					set_engine_par($ENGINE_PAR_VOLUME, $sends_temp, %GROUP_DATA[$count_1 * 8 + 6] + $count_2 , -1, -1)
+					inc($count_2)
+				end while
+			end if
+		end if
+		inc($count_1)
+	end while
+	
+	set_control_par_str(%panel_id[2],$CONTROL_PAR_LABEL,get_engine_par_disp($ENGINE_PAR_VOLUME,...
+									%GROUP_DATA[%INSTRUMENT_OFFSET[$instruments] * 8 + 4], -1, -1) & "dB")
+end on
+
+on ui_control ($room_mix)
+	if ($room_mix < $SENDS_CURVE_FIRST_POINT_X)
+		$sends_temp := 5 * $room_mix / 2
+	else
+		$sends_temp := ($room_mix - $SENDS_CURVE_FIRST_POINT_X) / 2 + 5 * $SENDS_CURVE_FIRST_POINT_X / 2
+	end if	
+
+	if ($sends_temp > $SENDS_RANGE_MAX)
+		$sends_temp := $SENDS_RANGE_MAX
+	else
+		if ($sends_temp < 0)
+			$sends_temp:= 0
+		end if
+	end if
+
+	$count_1 := %INSTRUMENT_OFFSET[$instruments]
+	while ($count_1 < %INSTRUMENT_OFFSET[$instruments + 1])
+		if (%GROUP_DATA[$count_1 * 8 + 4] > -1)
+			set_engine_par($ENGINE_PAR_VOLUME, $sends_temp, %GROUP_DATA[$count_1 * 8 + 5], -1, -1)
+			if ($instruments = $SNARE_ID)
+				$count_2 := 1
+				while ($count_2 < $NUM_SNARE_INSTRUMENTS)
+					set_engine_par($ENGINE_PAR_VOLUME, $sends_temp, %GROUP_DATA[$count_1 * 8 + 5] + $count_2 , -1, -1)
+					inc($count_2)
+				end while
+			end if
+		end if
+		inc($count_1)
+	end while
+	
+
+	set_control_par_str(%panel_id[3],$CONTROL_PAR_LABEL,get_engine_par_disp($ENGINE_PAR_VOLUME,...
+									%GROUP_DATA[%INSTRUMENT_OFFSET[$instruments] * 8 + 5], -1, -1) & "dB")
+end on
+
+on ui_control ($tune)
+	$count_1 := %INSTRUMENT_OFFSET[$instruments] * 8
+	while ($count_1 < %INSTRUMENT_OFFSET[$instruments + 1] * 8)
+		if (%GROUP_DATA[$count_1] > -1)
+			set_engine_par($ENGINE_PAR_TUNE, $tune, %GROUP_DATA[$count_1], -1, -1)
+			if ($instruments = $SNARE_ID)
+				$count_2 := 1
+				while ($count_2 < $NUM_SNARE_INSTRUMENTS)
+					set_engine_par($ENGINE_PAR_TUNE, $tune, %GROUP_DATA[$count_1] + $count_2 , -1, -1)
+					inc($count_2)
+				end while
+			end if
+		end if
+		inc($count_1)
+	end while
+	
+	set_control_par_str(%panel_id[4],$CONTROL_PAR_LABEL,get_engine_par_disp($ENGINE_PAR_TUNE,...
+									%GROUP_DATA[%INSTRUMENT_OFFSET[$instruments] * 8 + 4], -1, -1) & "")
+end on
+
+on ui_control ($attack)
+	$count_1 := %INSTRUMENT_OFFSET[$instruments] * 8
+	while ($count_1 < %INSTRUMENT_OFFSET[$instruments + 1] * 8)
+		if (%GROUP_DATA[$count_1] > -1)
+			set_engine_par($ENGINE_PAR_ATTACK, $attack, %GROUP_DATA[$count_1],...
+													find_mod(%GROUP_DATA[$count_1], "ENV_AHDSR"), -1)
+			if ($instruments = $SNARE_ID)
+				$count_2 := 1
+				while ($count_2 < $NUM_SNARE_INSTRUMENTS)
+					set_engine_par($ENGINE_PAR_ATTACK, $attack, %GROUP_DATA[$count_1] + $count_2 ,...
+													find_mod(%GROUP_DATA[$count_1] + $count_2 , "ENV_AHDSR"), -1)
+					inc($count_2)
+				end while
+			end if
+		end if
+		inc($count_1)
+	end while
+	
+	set_control_par_str(%panel_id[5],$CONTROL_PAR_LABEL,get_engine_par_disp($ENGINE_PAR_ATTACK,...
+									%GROUP_DATA[%INSTRUMENT_OFFSET[$instruments] * 8 + 4],...
+											find_mod(%GROUP_DATA[%INSTRUMENT_OFFSET[$instruments] * 8 + 4], "ENV_AHDSR"), -1) & " ms")
+end on
+
+on ui_control ($hold)
+	$count_1 := %INSTRUMENT_OFFSET[$instruments] * 8
+	while ($count_1 < %INSTRUMENT_OFFSET[$instruments + 1] * 8)
+		if (%GROUP_DATA[$count_1] > -1)
+			set_engine_par($ENGINE_PAR_HOLD, $hold, %GROUP_DATA[$count_1],...
+													find_mod(%GROUP_DATA[$count_1], "ENV_AHDSR"), -1)
+			if ($instruments = $SNARE_ID)
+				$count_2 := 1
+				while ($count_2 < $NUM_SNARE_INSTRUMENTS)
+					set_engine_par($ENGINE_PAR_HOLD, $hold, %GROUP_DATA[$count_1] + $count_2 ,...
+													find_mod(%GROUP_DATA[$count_1] + $count_2 , "ENV_AHDSR"), -1)
+					inc($count_2)
+				end while
+			end if
+		end if
+		inc($count_1)
+	end while
+	
+	set_control_par_str(%panel_id[6],$CONTROL_PAR_LABEL,get_engine_par_disp($ENGINE_PAR_HOLD,...
+									%GROUP_DATA[%INSTRUMENT_OFFSET[$instruments] * 8 + 4],...
+											find_mod(%GROUP_DATA[%INSTRUMENT_OFFSET[$instruments] * 8 + 4], "ENV_AHDSR"), -1) & " ms")
+end on
+
+on ui_control ($decay)
+	$count_1 := %INSTRUMENT_OFFSET[$instruments] * 8
+	while ($count_1 < %INSTRUMENT_OFFSET[$instruments + 1] * 8)
+		if (%GROUP_DATA[$count_1] > -1)
+			set_engine_par($ENGINE_PAR_DECAY, $decay, %GROUP_DATA[$count_1],...
+													find_mod(%GROUP_DATA[$count_1], "ENV_AHDSR"), -1)
+			if ($instruments = $SNARE_ID)
+				$count_2 := 1
+				while ($count_2 < $NUM_SNARE_INSTRUMENTS)
+					set_engine_par($ENGINE_PAR_DECAY, $decay, %GROUP_DATA[$count_1] + $count_2 ,...
+													find_mod(%GROUP_DATA[$count_1] + $count_2 , "ENV_AHDSR"), -1)
+					inc($count_2)
+				end while
+			end if
+		end if
+		inc($count_1)
+	end while
+	
+	set_control_par_str(%panel_id[7],$CONTROL_PAR_LABEL,get_engine_par_disp($ENGINE_PAR_DECAY,...
+									%GROUP_DATA[%INSTRUMENT_OFFSET[$instruments] * 8 + 4],...
+											find_mod(%GROUP_DATA[%INSTRUMENT_OFFSET[$instruments] * 8 + 4], "ENV_AHDSR"), -1) & " ms")
+end on
+
+{Mixer Callbacks}
+on ui_control ($mixer_preset_next)
+	if($mixer_preset_menu = $FACTORY_PRESETS - 1 and %kitb_mixer_userpresets[0] = 0)
+		$mixer_preset_menu := 0
+	else
+		if($mixer_preset_menu = $FACTORY_PRESETS + %kitb_mixer_userpresets[0])
+			$mixer_preset_menu := 0
+		else
+			inc($mixer_preset_menu)
+			if($mixer_preset_menu = $FACTORY_PRESETS)
+				inc($mixer_preset_menu)
+			end if
+		end if
+	end if
+	$last_mixer_preset := $mixer_preset_menu
+	pgs_set_key_val(ACTION_TYPE,0, -1)
+	pgs_set_key_val(MIXER_DATA, 0, 1)
+	pgs_set_key_val(MIXER_DATA, 1, 0)
+	pgs_set_key_val(MIXER_DATA, 2, $mixer_preset_menu)
+	pgs_set_key_val(MIXER_DATA, 4, 0)
+	pgs_set_key_val(ACTION_TYPE,0, 1)
+end on
+
+on ui_control ($mixer_preset_prev)
+	if($mixer_preset_menu = 0)
+		if(%kitb_mixer_userpresets[0] = 0)
+			$mixer_preset_menu := $FACTORY_PRESETS - 1
+		else
+			$mixer_preset_menu := $FACTORY_PRESETS + %kitb_mixer_userpresets[0]
+		end if
+	else
+		dec($mixer_preset_menu)
+		if($mixer_preset_menu = $FACTORY_PRESETS)
+			dec($mixer_preset_menu)
+		end if
+	end if
+	$last_mixer_preset := $mixer_preset_menu
+	pgs_set_key_val(ACTION_TYPE,0, -1)
+	pgs_set_key_val(MIXER_DATA, 0, 1)
+	pgs_set_key_val(MIXER_DATA, 1, 0)
+	pgs_set_key_val(MIXER_DATA, 2, $mixer_preset_menu)
+	pgs_set_key_val(MIXER_DATA, 4, 0)
+	pgs_set_key_val(ACTION_TYPE,0, 1)
+end on
+
+on ui_control ($mixer_preset_menu)
+	if($mixer_preset_menu = $FACTORY_PRESETS)
+		$mixer_preset_menu := $last_mixer_preset
+	else
+		pgs_set_key_val(ACTION_TYPE, 0, -1)
+		pgs_set_key_val(MIXER_DATA, 0, 1)
+		pgs_set_key_val(MIXER_DATA, 1, 0)
+		pgs_set_key_val(MIXER_DATA, 2, $mixer_preset_menu)
+		pgs_set_key_val(MIXER_DATA, 4, 0)
+		pgs_set_key_val(ACTION_TYPE, 0, 1)
+	end if
+	$last_mixer_preset := $mixer_preset_menu
+end on
+
+on ui_control ($mixer_preset_menu_new)
+	if($mixer_preset_menu_new # $FACTORY_PRESETS)
+		pgs_set_key_val(ACTION_TYPE, 0, -1)
+		pgs_set_key_val(MIXER_DATA, 0, 1)
+		pgs_set_key_val(MIXER_DATA, 1, 0)
+		pgs_set_key_val(MIXER_DATA, 2, $mixer_preset_menu_new)
+		pgs_set_key_val(MIXER_DATA, 4, 0)
+		pgs_set_key_val(ACTION_TYPE, 0, 1)
+	end if
+	$mixer_preset_menu := $mixer_preset_menu_new
+	$last_mixer_preset := $mixer_preset_menu
+end on
+	
+{/Mixer Callbacks}
+
+{Groove Callbacks}
+on ui_control ($play)
+	pgs_set_key_val(ACTION_TYPE, 0, -1)
+	pgs_set_key_val(GROOVE_DATA, 0, $play)
+	pgs_set_key_val(GROOVE_DATA, 1, 0)
+	pgs_set_key_val(GROOVE_DATA, 2, 0)
+	pgs_set_key_val(GROOVE_DATA, 3, 0)
+	pgs_set_key_val(ACTION_TYPE, 0, 2)
+	if ($play = 0)
+		$n_counter := 0
+		while ($n_counter < 127)
+			set_key_pressed($n_counter, 0)
+			note_off($ALL_EVENTS)
+			wait(1000)   
+			inc($n_counter)
+		end while
+	end if
+end on
+
+on listener
+		if ($NI_TRANSPORT_RUNNING = 1)
+				if($select_by_midi = 1)
+					$select_by_midi := 0
+				end if
+		else
+			if ($play = 1)
+				if($select_by_midi = 1)
+					$select_by_midi := 0
+				end if
+			else
+				if($sel_by_midi_flag = 1)
+					$select_by_midi := 1
+				end if	
+			end if
+		end if
+end on
+
+on ui_control ($prev_groove)
+	pgs_set_key_val(ACTION_TYPE, 0, -1)
+	pgs_set_key_val(GROOVE_DATA, 0, -1)
+	pgs_set_key_val(GROOVE_DATA, 1, 1)
+	pgs_set_key_val(GROOVE_DATA, 2, 0)
+	pgs_set_key_val(ACTION_TYPE, 0, 2)
+	$prev_groove := 0
+end on
+
+on ui_control ($next_groove)
+	pgs_set_key_val(ACTION_TYPE, 0, -1)
+	pgs_set_key_val(GROOVE_DATA, 0, -1)
+	pgs_set_key_val(GROOVE_DATA, 1, 0)
+	pgs_set_key_val(GROOVE_DATA, 2, 1)
+	pgs_set_key_val(GROOVE_DATA, 3, 0)
+	pgs_set_key_val(ACTION_TYPE, 0, 2)
+	$next_groove := 0
+end on
+{/Groove Callbacks}
+
+on async_complete
+	if($NI_ASYNC_ID = $mixer_preset_load_id_1)
+		$mixer_preset_load_id_1 := -1
+	end if
+	if($NI_ASYNC_ID = $mixer_preset_load_id_2)
+		$mixer_preset_load_id_2 := -1
+	end if
+	if($NI_ASYNC_ID = $mixer_check)
+		if($NI_ASYNC_EXIT_STATUS # 1)
+			while($mixer_init_flag = 1)
+				wait(75)
+			end while
+			%kitb_mixer_userpresets[0] := 0
+			
+			set_menu_item_visibility(%mixer_ui_id[1], $FACTORY_PRESETS, 0)
+			set_menu_item_visibility(%mixer_ui_id[2], $FACTORY_PRESETS, 0)
+		
+			$count := $FACTORY_PRESETS + 1
+			while($count < $FACTORY_PRESETS + 1 + $USER_PRESETS)
+				set_menu_item_visibility(%mixer_ui_id[1], $count, 0)
+				set_menu_item_visibility(%mixer_ui_id[2], $count, 0)
+				inc($count)
+			end while
+		end if		
+	end if
+end on
+
+on pgs_changed
+	select (pgs_get_key_val(ACTION_TYPE, 0))
+		case 1
+			if (pgs_get_key_val(MIXER_DATA, 1) # $mixer_preset_flag)
+				$mixer_preset_flag := pgs_get_key_val(MIXER_DATA, 1)
+				if($mixer_preset_flag = 1)
+					set_control_par(%mixer_ui_id[2],$CONTROL_PAR_HIDE,$HIDE_WHOLE_CONTROL)
+					set_control_par(%mixer_ui_id[1],$CONTROL_PAR_HIDE,$HIDE_PART_NOTHING)
+				else
+					set_control_par(%mixer_ui_id[1],$CONTROL_PAR_HIDE,$HIDE_WHOLE_CONTROL)
+					set_control_par(%mixer_ui_id[2],$CONTROL_PAR_HIDE,$HIDE_PART_NOTHING)
+				end if
+			end if
+			if(pgs_get_key_val(MIXER_DATA, 4) = 1)
+				$mixer_preset_load_id_1 := load_array(%kitb_mixer_userpresets,1)
+				$mixer_preset_load_id_2 := load_array(!kitb_mixerpreset_names,1)
+				
+				while ($mixer_preset_load_id_1 # -1 or $mixer_preset_load_id_2 # -1)
+					wait(10)
+				end while
+				
+				if(%kitb_mixer_userpresets[0] = 0)
+					set_menu_item_visibility(%mixer_ui_id[1], $FACTORY_PRESETS, 0)
+					set_menu_item_visibility(%mixer_ui_id[2], $FACTORY_PRESETS, 0)
+				else
+					set_menu_item_visibility(%mixer_ui_id[1], $FACTORY_PRESETS, 1)	
+					set_menu_item_visibility(%mixer_ui_id[2], $FACTORY_PRESETS, 1)	
+				end if
+				
+				$count := $FACTORY_PRESETS + 1
+				while($count < $FACTORY_PRESETS + 1 + $USER_PRESETS)
+					set_menu_item_str(%mixer_ui_id[1], $count, !kitb_mixerpreset_names[$count - $FACTORY_PRESETS - 1])
+					set_menu_item_str(%mixer_ui_id[2], $count, !kitb_mixerpreset_names[$count - $FACTORY_PRESETS - 1])
+					set_menu_item_visibility(%mixer_ui_id[1], $count, 1)
+					set_menu_item_visibility(%mixer_ui_id[2], $count, 1)
+					if($count > $FACTORY_PRESETS + %kitb_mixer_userpresets[0])
+						set_menu_item_visibility(%mixer_ui_id[1], $count, 0)
+						set_menu_item_visibility(%mixer_ui_id[2], $count, 0)
+					end if
+					inc($count)
+				end while
+			end if
+			if (pgs_get_key_val(MIXER_DATA, 2) # -1)
+				$mixer_preset_menu := pgs_get_key_val(MIXER_DATA, 2)
+				$mixer_preset_menu_new := pgs_get_key_val(MIXER_DATA, 2)
+				$last_mixer_preset := $mixer_preset_menu
+			end if
+		case 2
+			if (pgs_get_key_val(GROOVE_DATA, 0) # -1)
+				$play := pgs_get_key_val(GROOVE_DATA, 0)
+			end if
+			set_text($groove_display, pgs_get_str_key_val(GROOVE_NAME))
+	end select
+end on
+
+on persistence_changed
+	if ($init_LOADED = 1)
+		{init callback has been executed, i.e. Master NKI instrument has been loaded from scratch}
+
+	else
+		{init callback has NOT been executed, i.e. snapshot has been loaded}
+
+		{Reset Trigger State}
+		$count_1 := 0
+		while ($count_1 < $NUM_INSTRUMENTS)
+			set_control_par(%kit_sel_id[$count_1], $CONTROL_PAR_VALUE, 0)
+			set_control_par(%kit_tr_id[$count_1], $CONTROL_PAR_PICTURE_STATE, 1)
+			inc($count_1)
+		end while
+
+		pgs_set_key_val(ACTION_TYPE, 0, -1)
+		pgs_set_key_val(ACTIVE_SNARE, 0, $active_snare)
+
+		if (pgs_get_key_val(ACTIVE_SNARE, 0) = 0)
+			$snare_a := 1
+			$snare_b := 0
+		else
+			$snare_a := 0
+			$snare_b := 1
+		end if
+
+		select ($active_snare)
+			case 0
+				
+				fade_out($ALL_EVENTS, 100000, 1)
+				$loading_flag := 1
+				wait(100000)
+
+				$snare_b := 0
+				
+				if (pgs_get_key_val(INSTRUMENT_PURGE_STATE, $SNARE_ID) = 1)
+					set_control_par(%kit_msk_id[$SNARE_ID], $CONTROL_PAR_PICTURE_STATE, 1)
+					$count_1 := %INSTRUMENT_OFFSET[$SNARE_ID]
+					while ($count_1 < %INSTRUMENT_OFFSET[$SNARE_ID + 1])
+						if (pgs_get_key_val(CHANNEL_PURGE_STATE, %instr_channel[$SNARE_ID]) = 1)
+							if (%GROUP_DATA[$count_1 * 8] # -1)
+								purge_group(%GROUP_DATA[$count_1 * 8], 1)
+								purge_group(%GROUP_DATA[$count_1 * 8] + 1, 0)
+							end if
+							if (%GROUP_DATA[$count_1 * 8 + 1] # -1)
+								purge_group(%GROUP_DATA[$count_1 * 8 + 1], 1)
+								purge_group(%GROUP_DATA[$count_1 * 8 + 1] + 1, 0)
+							end if
+							if (%GROUP_DATA[$count_1 * 8 + 2] # -1)
+								purge_group(%GROUP_DATA[$count_1 * 8 + 2], 1)
+								purge_group(%GROUP_DATA[$count_1 * 8 + 2] + 1, 0)
+							end if
+						end if
+						if (pgs_get_key_val(CHANNEL_PURGE_STATE, 9) = 1)
+							if (%GROUP_DATA[$count_1 * 8 + 4] # -1)
+								purge_group(%GROUP_DATA[$count_1 * 8 + 4], 1)
+								purge_group(%GROUP_DATA[$count_1 * 8 + 4] + 1, 0)
+							end if
+						end if
+						if (pgs_get_key_val(CHANNEL_PURGE_STATE, 10) = 1)
+							if (%GROUP_DATA[$count_1 * 8 + 5] # -1)
+								purge_group(%GROUP_DATA[$count_1 * 8 + 5], 1)
+								purge_group(%GROUP_DATA[$count_1 * 8 + 5] + 1, 0)
+							end if
+						end if
+						if (pgs_get_key_val(CHANNEL_PURGE_STATE, 11) = 1)
+							if (%GROUP_DATA[$count_1 * 8 + 6] # -1)
+								purge_group(%GROUP_DATA[$count_1 * 8 + 6], 1)
+								purge_group(%GROUP_DATA[$count_1 * 8 + 6] + 1, 0)
+							end if
+						end if
+						if (pgs_get_key_val(CHANNEL_PURGE_STATE, 12) = 1)
+							if (%GROUP_DATA[$count_1 * 8 + 7] # -1)
+								purge_group(%GROUP_DATA[$count_1 * 8 + 7], 1)
+								purge_group(%GROUP_DATA[$count_1 * 8 + 7] + 1, 0)
+							end if
+						end if
+						inc($count_1)
+					end while
+				else
+					set_control_par(%kit_msk_id[$SNARE_ID], $CONTROL_PAR_PICTURE_STATE, 0)
+				end if
+
+				set_control_par_str(%kit_tr_id[$SNARE_ID],$CONTROL_PAR_PICTURE,"NID_kit_c_snare1")
+				set_control_par(%kit_tr_id[$SNARE_ID],$CONTROL_PAR_POS_X,218)
+				set_control_par(%kit_tr_id[$SNARE_ID],$CONTROL_PAR_POS_Y,215)
+				
+				$loading_flag := 0
+				
+				pgs_set_key_val(ACTION_TYPE, 0, -1)
+				pgs_set_key_val(ACTIVE_SNARE, 0, $active_snare)
+			case 1
+				fade_out($ALL_EVENTS, 100000, 1)
+				$loading_flag := 1
+				wait(100000)
+				
+				$snare_a := 0
+				
+				if (pgs_get_key_val(INSTRUMENT_PURGE_STATE, $SNARE_ID) = 1)
+					set_control_par(%kit_msk_id[$SNARE_ID], $CONTROL_PAR_PICTURE_STATE, 3)
+					$count_1 := %INSTRUMENT_OFFSET[$SNARE_ID]
+					while ($count_1 < %INSTRUMENT_OFFSET[$SNARE_ID + 1])
+						if (pgs_get_key_val(CHANNEL_PURGE_STATE, %instr_channel[$SNARE_ID]) = 1)
+							if (%GROUP_DATA[$count_1 * 8] # -1)
+								purge_group(%GROUP_DATA[$count_1 * 8], 0)
+								purge_group(%GROUP_DATA[$count_1 * 8] + 1, 1)
+							end if
+							if (%GROUP_DATA[$count_1 * 8 + 1] # -1)
+								purge_group(%GROUP_DATA[$count_1 * 8 + 1], 0)
+								purge_group(%GROUP_DATA[$count_1 * 8 + 1] + 1, 1)
+							end if
+							if (%GROUP_DATA[$count_1 * 8 + 2] # -1)
+								purge_group(%GROUP_DATA[$count_1 * 8 + 2], 0)
+								purge_group(%GROUP_DATA[$count_1 * 8 + 2] + 1, 1)
+							end if
+						end if
+						if (pgs_get_key_val(CHANNEL_PURGE_STATE, 9) = 1)
+							if (%GROUP_DATA[$count_1 * 8 + 4] # -1)
+								purge_group(%GROUP_DATA[$count_1 * 8 + 4], 0)
+								purge_group(%GROUP_DATA[$count_1 * 8 + 4] + 1, 1)
+							end if
+						end if
+						if (pgs_get_key_val(CHANNEL_PURGE_STATE, 10) = 1)
+							if (%GROUP_DATA[$count_1 * 8 + 5] # -1)
+								purge_group(%GROUP_DATA[$count_1 * 8 + 5], 0)
+								purge_group(%GROUP_DATA[$count_1 * 8 + 5] + 1, 1)
+							end if
+						end if
+						if (pgs_get_key_val(CHANNEL_PURGE_STATE, 11) = 1)
+							if (%GROUP_DATA[$count_1 * 8 + 6] # -1)
+								purge_group(%GROUP_DATA[$count_1 * 8 + 6], 0)
+								purge_group(%GROUP_DATA[$count_1 * 8 + 6] + 1, 1)
+							end if
+						end if
+						if (pgs_get_key_val(CHANNEL_PURGE_STATE, 12) = 1)
+							if (%GROUP_DATA[$count_1 * 8 + 7] # -1)
+								purge_group(%GROUP_DATA[$count_1 * 8 + 7], 0)
+								purge_group(%GROUP_DATA[$count_1 * 8 + 7] + 1, 1)
+							end if
+						end if
+						inc($count_1)
+					end while
+				else
+					set_control_par(%kit_msk_id[$SNARE_ID], $CONTROL_PAR_PICTURE_STATE, 2)
+				end if
+				
+				set_control_par_str(%kit_tr_id[$SNARE_ID],$CONTROL_PAR_PICTURE,"NID_kit_c_snare2")
+				set_control_par(%kit_tr_id[$SNARE_ID],$CONTROL_PAR_POS_X,215)
+				set_control_par(%kit_tr_id[$SNARE_ID],$CONTROL_PAR_POS_Y,208)
+				
+				$loading_flag := 0
+				
+				pgs_set_key_val(ACTION_TYPE, 0, -1)
+				pgs_set_key_val(ACTIVE_SNARE, 0, $active_snare)
+		end select
+
+		call gui_update
+		call instrument_select
+		
+	end if
+	$init_LOADED := 0
+end on
+
+
