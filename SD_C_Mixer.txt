@@ -292,11 +292,11 @@ on init
 	declare %snare_purge_groups[10] := (...
 	{0 - top 1}			1,...
 	{1 - top 2}			2,...
-	{2 - top 3}			2,...
+	{2 - top 3}			3,...
 	{3 - top end}		3,...
 	{4 - bot 1}			10,...
 	{5 - bot 2}			11,...
-	{6 - bot 3}			11,...
+	{6 - bot 3}			12,...
 	{7 - bot end}		12,...
 	{8 - bleed start}	13,...
 	{9 - bleed end}		17)
@@ -306,35 +306,35 @@ on init
 	14,...
 	15,...
 	16,...
-	16,...
-	16,...
-	16)
+	17,...
+	17,...
+	17)
 	
 	declare %oh_purge_groups[23*4]
-	{oh1}
-		{0 - Kick}			%oh_purge_groups[0] := 17
-		{1 - Snare 1}		%oh_purge_groups[1] := 18
-		{2 - Snare 2}		%oh_purge_groups[2] := 19
-		{3 - Snare 3}		%oh_purge_groups[3] := 19
-		{4 - HiHat}			%oh_purge_groups[4] := 20
-		{5 - Tom 1}			%oh_purge_groups[5] := 21
-		{6 - Tom 2}			%oh_purge_groups[6] := 22
-		{7 - Tom 3}			%oh_purge_groups[7] := 23
-		{8 - Tom 4}			%oh_purge_groups[8] := 23
-		{9 - Tom 5}			%oh_purge_groups[9] := 23
-		{10 - Cymb 1}		%oh_purge_groups[10] := 24
-		{11 - Cymb 2}		%oh_purge_groups[11] := 25
-		{12 - Cymb 3}		%oh_purge_groups[12] := 26
-		{13 - Cymb 4}		%oh_purge_groups[13] := 27
-		{14 - Cymb 5}		%oh_purge_groups[14] := 28
-		{15 - Cymb 6}		%oh_purge_groups[15] := 28
-		{16 - Cymb 7}		%oh_purge_groups[16] := 28
-		{17 - Perc 1}		%oh_purge_groups[17] := 29
-		{18 - Perc 2}		%oh_purge_groups[18] := 30
-		{19 - Perc 3}		%oh_purge_groups[19] := 31
-		{20 - Perc 4}		%oh_purge_groups[20] := 32
-		{21 - Perc 5}		%oh_purge_groups[21] := 33
-		{22 - End}			%oh_purge_groups[22] := 34
+{oh1}
+	{0 - Kick}			%oh_purge_groups[0] := 17
+	{1 - Snare 1}		%oh_purge_groups[1] := 18
+	{2 - Snare 2}		%oh_purge_groups[2] := 19
+	{3 - Snare 3}		%oh_purge_groups[3] := 20
+	{4 - HiHat}			%oh_purge_groups[4] := 20
+	{5 - Tom 1}			%oh_purge_groups[5] := 21
+	{6 - Tom 2}			%oh_purge_groups[6] := 22
+	{7 - Tom 3}			%oh_purge_groups[7] := 23
+	{8 - Tom 4}			%oh_purge_groups[8] := 24
+	{9 - Tom 5}			%oh_purge_groups[9] := 24
+	{10 - Cymb 1}		%oh_purge_groups[10] := 24
+	{11 - Cymb 2}		%oh_purge_groups[11] := 25
+	{12 - Cymb 3}		%oh_purge_groups[12] := 26
+	{13 - Cymb 4}		%oh_purge_groups[13] := 27
+	{14 - Cymb 5}		%oh_purge_groups[14] := 28
+	{15 - Cymb 6}		%oh_purge_groups[15] := 29
+	{16 - Cymb 7}		%oh_purge_groups[16] := 29
+	{17 - Perc 1}		%oh_purge_groups[17] := 29
+	{18 - Perc 2}		%oh_purge_groups[18] := 30
+	{19 - Perc 3}		%oh_purge_groups[19] := 31
+	{20 - Perc 4}		%oh_purge_groups[20] := 32
+	{21 - Perc 5}		%oh_purge_groups[21] := 33
+	{22 - End}			%oh_purge_groups[22] := 34
 		
 		{automatic fill for OH2, 3 and 4}
 		select ($NUM_OF_OH)
@@ -7258,7 +7258,11 @@ on ui_control($purge_white)
 								end while
 							end if
 						end if
-						inc($count3)
+                        if(%instrument_id_remap[$count3 - ($purge_pointer * 23)] = 1)
+                            $count3 := $count3 + 3 - $active_snare
+                        else
+                            inc($count3)
+                        end if
 						wait($LOAD_WAIT)
 					end while
 				else
@@ -7394,7 +7398,11 @@ on ui_control($purge_red)
 								end while
 							end if
 						end if
-						inc($count3)
+                        if(%instrument_id_remap[$count3 - ($purge_pointer * 23)] = 1)
+                            $count3 := $count3 + 3 - $active_snare
+                        else
+                            inc($count3)
+                        end if
 						wait($LOAD_WAIT)
 					end while
 				else

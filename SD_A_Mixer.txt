@@ -287,16 +287,16 @@ on init
 	$PERC4_ID)
 	
 	{Start groups of the generic channels, last slot is max}
-	declare %generic_close_groups[7] := (43,48,53,58,63,65,67)
+	declare %generic_close_groups[7] := (4,5,6,7,8,9,10)
 	
 	declare %snare_purge_groups[10] := (...
 	{0 - top 1}			1,...
 	{1 - top 2}			2,...
-	{2 - top 3}			2,...
+	{2 - top 3}			3,...
 	{3 - top end}		3,...
 	{4 - bot 1}			11,...
 	{5 - bot 2}			12,...
-	{6 - bot 3}			12,...
+	{6 - bot 3}			13,...
 	{7 - bot end}		13,...
 	{8 - bleed start}	14,...
 	{9 - bleed end}		19)
@@ -307,7 +307,7 @@ on init
 	16,...
 	17,...
 	18,...
-	18,...
+	19,...
 	19)
 	
 	declare %oh_purge_groups[23*4]
@@ -315,25 +315,25 @@ on init
 	{0 - Kick}			%oh_purge_groups[0] := 19
 	{1 - Snare 1}		%oh_purge_groups[1] := 20
 	{2 - Snare 2}		%oh_purge_groups[2] := 21
-	{3 - Snare 3}		%oh_purge_groups[3] := 21
+	{3 - Snare 3}		%oh_purge_groups[3] := 22
 	{4 - HiHat}			%oh_purge_groups[4] := 22
 	{5 - Tom 1}			%oh_purge_groups[5] := 23
 	{6 - Tom 2}			%oh_purge_groups[6] := 24
 	{7 - Tom 3}			%oh_purge_groups[7] := 25
 	{8 - Tom 4}			%oh_purge_groups[8] := 26
-	{9 - Tom 5}			%oh_purge_groups[9] := 26
+	{9 - Tom 5}			%oh_purge_groups[9] := 27
 	{10 - Cymb 1}		%oh_purge_groups[10] := 27
 	{11 - Cymb 2}		%oh_purge_groups[11] := 28
 	{12 - Cymb 3}		%oh_purge_groups[12] := 29
 	{13 - Cymb 4}		%oh_purge_groups[13] := 30
 	{14 - Cymb 5}		%oh_purge_groups[14] := 31
-	{15 - Cymb 6}		%oh_purge_groups[15] := 31
-	{16 - Cymb 7}		%oh_purge_groups[16] := 31
+	{15 - Cymb 6}		%oh_purge_groups[15] := 32
+	{16 - Cymb 7}		%oh_purge_groups[16] := 32
 	{17 - Perc 1}		%oh_purge_groups[17] := 32
 	{18 - Perc 2}		%oh_purge_groups[18] := 33
 	{19 - Perc 3}		%oh_purge_groups[19] := 34
 	{20 - Perc 4}		%oh_purge_groups[20] := 35
-	{21 - Perc 5}		%oh_purge_groups[21] := 35
+	{21 - Perc 5}		%oh_purge_groups[21] := 36
 	{22 - End}			%oh_purge_groups[22] := 36
 	
 	{automatic fill for OH2, 3 and 4}
@@ -7258,7 +7258,11 @@ on ui_control($purge_white)
 								end while
 							end if
 						end if
-						inc($count3)
+                        if(%instrument_id_remap[$count3 - ($purge_pointer * 23)] = 1) {move count3 over snare groups}
+                            $count3 := $count3 + 3 - $active_snare
+                        else
+                            inc($count3)
+                        end if
 						wait($LOAD_WAIT)
 					end while
 				else
@@ -7394,7 +7398,11 @@ on ui_control($purge_red)
 								end while
 							end if
 						end if
-						inc($count3)
+                        if(%instrument_id_remap[$count3 - ($purge_pointer * 23)] = 1) {move count3 over snare groups}
+                            $count3 := $count3 + 3 - $active_snare
+                        else
+                            inc($count3)
+                        end if
 						wait($LOAD_WAIT)
 					end while
 				else
