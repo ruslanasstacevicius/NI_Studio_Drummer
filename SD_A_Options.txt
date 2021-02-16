@@ -3959,7 +3959,7 @@ end on
 on persistence_changed
 	if ($init_LOADED = 1)
 		{init callback has been executed, i.e. Master NKI instrument has been loaded from scratch}
-		call update_mapping_editor_gui
+
 	else
 		{init callback has NOT been executed, i.e. snapshot has been loaded}
 
