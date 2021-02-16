@@ -2855,8 +2855,8 @@ on init
 					case $PERC1_ID to $PERC5_ID
 						set_key_color($count_1, $KEY_COLOR_ORANGE)
 				end select
-				$instruments := %note_instruments[%current_mapping_data[$count_1]]
-				set_key_name($count_1, !inst_visual_names[$instruments] & " " & !artic_visual_name[%FACTORY_MAPPING_DATA[$current_mapping_preset * 128 + $count_1]])
+				$temp_1 := %note_instruments[%current_mapping_data[$count_1]]
+				set_key_name($count_1, !inst_visual_names[$temp_1] & " " & !artic_visual_name[%current_mapping_data[$count_1]])
 			else
 				set_key_color($count_1, $KEY_COLOR_INACTIVE)
 				set_key_name($count_1, "")
@@ -3199,8 +3199,8 @@ function recall_data
 				case $PERC1_ID to $PERC5_ID
 					set_key_color($count_1, $KEY_COLOR_ORANGE)
 			end select
-			$instruments := %note_instruments[%current_mapping_data[$count_1]]
-			set_key_name($count_1, !inst_visual_names[$instruments] & " " & !artic_visual_name[%FACTORY_MAPPING_DATA[$current_mapping_preset * 128 + $count_1]])
+			$temp_1 := %note_instruments[%current_mapping_data[$count_1]]
+			set_key_name($count_1, !inst_visual_names[$temp_1] & " " & !artic_visual_name[%current_mapping_data[$count_1]])
 		else
 			set_key_color($count_1, $KEY_COLOR_INACTIVE)
 			set_key_name($count_1, "")
@@ -3595,8 +3595,8 @@ on ui_control ($confirm_change)
 				case $PERC1_ID to $PERC5_ID
 					set_key_color($count_1, $KEY_COLOR_ORANGE)
 			end select
-			$instruments := %note_instruments[%current_mapping_data[$count_1]]
-			set_key_name($count_1, !inst_visual_names[$instruments] & " " & !artic_visual_name[%FACTORY_MAPPING_DATA[$current_mapping_preset * 128 + $count_1]])
+			$temp_1 := %note_instruments[%current_mapping_data[$count_1]]
+			set_key_name($count_1, !inst_visual_names[$temp_1] & " " & !artic_visual_name[%current_mapping_data[$count_1]])
 		else
 			set_key_color($count_1, $KEY_COLOR_INACTIVE)
 			set_key_name($count_1, "")
@@ -3959,7 +3959,7 @@ end on
 on persistence_changed
 	if ($init_LOADED = 1)
 		{init callback has been executed, i.e. Master NKI instrument has been loaded from scratch}
-
+		call update_mapping_editor_gui
 	else
 		{init callback has NOT been executed, i.e. snapshot has been loaded}
 		if ($current_mapping_preset = $NUM_FACTORY_PRESETS)
