@@ -1246,10 +1246,10 @@ on init
 	
 	{Control Group "Panel"}
 		declare const $SENDS_RANGE_MAX := 795000
+		declare const ~RATIO1 := 2.75383396226415
+		declare const ~RATIO2 := 0.415388679245284
 		declare const $SENDS_CURVE_FIRST_POINT_X := 2 * $SENDS_RANGE_MAX / 8	{2/8 of the range}
-		declare const $SENDS_CURVE_SECOND_POINT_X := 4 * $SENDS_RANGE_MAX / 8	{6/8 of the range}
-		declare const $SENDS_CURVE_FIRST_POINT_Y := 5 * $SENDS_RANGE_MAX / 8	{5/8 of the range}
-		declare const $SENDS_CURVE_SECOND_POINT_Y := 7 * $SENDS_RANGE_MAX / 8	{7/8 of the range}
+		declare const $SENDS_CURVE_FIRST_POINT_Y := 547325
 		
 		declare $sends_temp
 	
@@ -1265,7 +1265,7 @@ on init
 		{/declarations}
 
 		make_instr_persistent($instruments)
-		
+
 		{ui_ids}
 		declare %panel_id[8]
 		%panel_id[0] := get_ui_id($load_instrument)
@@ -1407,16 +1407,16 @@ on init
 
 		$sends_temp := get_engine_par($ENGINE_PAR_VOLUME, %GROUP_DATA[%INSTRUMENT_OFFSET[$instruments] * 8 + 4], -1, -1)
 		if ($sends_temp < $SENDS_CURVE_FIRST_POINT_Y)
-			$oh_mix := 2 * $sends_temp / 5
+			$oh_mix := real_to_int(int_to_real($sends_temp)/~RATIO1)
 		else
-			$oh_mix := 2 * $sends_temp - 4 * $SENDS_CURVE_FIRST_POINT_X
+			$oh_mix := real_to_int((int_to_real($sends_temp)-~RATIO1*int_to_real($SENDS_CURVE_FIRST_POINT_X))/~RATIO2 + int_to_real($SENDS_CURVE_FIRST_POINT_X))
 		end if
 		
 		$sends_temp := get_engine_par($ENGINE_PAR_VOLUME, %GROUP_DATA[%INSTRUMENT_OFFSET[$instruments] * 8 + 5], -1, -1)
 		if ($sends_temp < $SENDS_CURVE_FIRST_POINT_Y)
-			$room_mix := 2 * $sends_temp / 5
+			$room_mix := real_to_int(int_to_real($sends_temp)/~RATIO1)
 		else
-			$room_mix := 2 * $sends_temp - 4 * $SENDS_CURVE_FIRST_POINT_X
+			$room_mix := real_to_int((int_to_real($sends_temp)-~RATIO1*int_to_real($SENDS_CURVE_FIRST_POINT_X))/~RATIO2 + int_to_real($SENDS_CURVE_FIRST_POINT_X))
 		end if
 		
 		$attack := get_engine_par($ENGINE_PAR_ATTACK, %GROUP_DATA[%INSTRUMENT_OFFSET[$instruments] * 8 + 4],...
@@ -1473,16 +1473,16 @@ function gui_update
 
 	$sends_temp := get_engine_par($ENGINE_PAR_VOLUME, %GROUP_DATA[%INSTRUMENT_OFFSET[$instruments] * 8 + 4], -1, -1)
 	if ($sends_temp < $SENDS_CURVE_FIRST_POINT_Y)
-		$oh_mix := 2 * $sends_temp / 5
+		$oh_mix := real_to_int(int_to_real($sends_temp)/~RATIO1)
 	else
-		$oh_mix := 2 * $sends_temp - 4 * $SENDS_CURVE_FIRST_POINT_X
+		$oh_mix := real_to_int((int_to_real($sends_temp)-~RATIO1*int_to_real($SENDS_CURVE_FIRST_POINT_X))/~RATIO2 + int_to_real($SENDS_CURVE_FIRST_POINT_X))
 	end if
 	
 	$sends_temp := get_engine_par($ENGINE_PAR_VOLUME, %GROUP_DATA[%INSTRUMENT_OFFSET[$instruments] * 8 + 5], -1, -1)
 	if ($sends_temp < $SENDS_CURVE_FIRST_POINT_Y)
-		$room_mix := 2 * $sends_temp / 5
+		$room_mix := real_to_int(int_to_real($sends_temp)/~RATIO1)
 	else
-		$room_mix := 2 * $sends_temp - 4 * $SENDS_CURVE_FIRST_POINT_X
+		$room_mix := real_to_int((int_to_real($sends_temp)-~RATIO1*int_to_real($SENDS_CURVE_FIRST_POINT_X))/~RATIO2 + int_to_real($SENDS_CURVE_FIRST_POINT_X))
 	end if
 	
 	$attack := get_engine_par($ENGINE_PAR_ATTACK, %GROUP_DATA[%INSTRUMENT_OFFSET[$instruments] * 8 + 4],...
@@ -2062,10 +2062,10 @@ end on
 
 on ui_control ($oh_mix)
 	if ($oh_mix < $SENDS_CURVE_FIRST_POINT_X)
-		$sends_temp := 5 * $oh_mix / 2
+		$sends_temp := real_to_int(~RATIO1*int_to_real($oh_mix))
 	else
-		$sends_temp := ($oh_mix - $SENDS_CURVE_FIRST_POINT_X) / 2 + 5 * $SENDS_CURVE_FIRST_POINT_X / 2
-	end if	
+		$sends_temp := real_to_int(~RATIO2*int_to_real(($oh_mix - $SENDS_CURVE_FIRST_POINT_X)) + ~RATIO1*int_to_real($SENDS_CURVE_FIRST_POINT_X))
+	end if
 
 	if ($sends_temp > $SENDS_RANGE_MAX)
 		$sends_temp := $SENDS_RANGE_MAX
@@ -2098,9 +2098,9 @@ end on
 
 on ui_control ($room_mix)
 	if ($room_mix < $SENDS_CURVE_FIRST_POINT_X)
-		$sends_temp := 5 * $room_mix / 2
+		$sends_temp := real_to_int(~RATIO1*int_to_real($room_mix))
 	else
-		$sends_temp := ($room_mix - $SENDS_CURVE_FIRST_POINT_X) / 2 + 5 * $SENDS_CURVE_FIRST_POINT_X / 2
+		$sends_temp := real_to_int(~RATIO2*int_to_real(($room_mix - $SENDS_CURVE_FIRST_POINT_X)) + ~RATIO1*int_to_real($SENDS_CURVE_FIRST_POINT_X))
 	end if	
 
 	if ($sends_temp > $SENDS_RANGE_MAX)
@@ -2588,7 +2588,7 @@ on persistence_changed
 				pgs_set_key_val(ACTION_TYPE, 0, -1)
 				pgs_set_key_val(ACTIVE_SNARE, 0, $active_snare)
 		end select
-		
+
 		call gui_update
 		call instrument_select
 
