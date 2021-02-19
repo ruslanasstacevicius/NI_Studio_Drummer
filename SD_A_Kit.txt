@@ -1380,14 +1380,6 @@ on init
 			$snare_a := 0
 			$snare_b := 1
 		end if
-		
-		if (pgs_get_key_val(INSTRUMENT_PURGE_STATE, $instruments) = 0)
-			set_menu_item_str(%panel_id[0], 0, "Load Instrument")
-			set_control_par_str(%panel_id[0],$CONTROL_PAR_PICTURE,"NID_kit_dropdown_unload_chip_red")
-		else
-			set_menu_item_str(%panel_id[0], 0, "Unload Instrument")
-			set_control_par_str(%panel_id[0],$CONTROL_PAR_PICTURE,"NID_kit_dropdown_unload_chip_normal")
-		end if
 
 		read_persistent_var($instruments)
 		$prev_instrument := $instruments
@@ -1396,6 +1388,14 @@ on init
 		if ($instruments = $SNARE_ID)
 			set_control_par(%kit_sn_id[0], $CONTROL_PAR_HIDE, $HIDE_PART_NOTHING)
 			set_control_par(%kit_sn_id[1], $CONTROL_PAR_HIDE, $HIDE_PART_NOTHING)
+		end if
+		
+		if (pgs_get_key_val(INSTRUMENT_PURGE_STATE, $instruments) = 0)
+			set_menu_item_str(%panel_id[0], 0, "Load Instrument")
+			set_control_par_str(%panel_id[0],$CONTROL_PAR_PICTURE,"NID_kit_dropdown_unload_chip_red")
+		else
+			set_menu_item_str(%panel_id[0], 0, "Unload Instrument")
+			set_control_par_str(%panel_id[0],$CONTROL_PAR_PICTURE,"NID_kit_dropdown_unload_chip_normal")
 		end if
 
 		$tune := get_engine_par($ENGINE_PAR_TUNE, %GROUP_DATA[%INSTRUMENT_OFFSET[$instruments] * 8 + 4], -1, -1)
