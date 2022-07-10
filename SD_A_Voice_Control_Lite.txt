@@ -52,8 +52,16 @@ on init
 	declare $count_4
 	declare $debug
 	{/helper variables}
-	
-	
+
+	{debug}
+	declare ui_label $debug_monitor (1,16)
+	set_text($debug_monitor,"")
+	set_control_par(get_ui_id($debug_monitor),$CONTROL_PAR_WIDTH,240)
+	set_control_par(get_ui_id($debug_monitor),$CONTROL_PAR_HEIGHT,230)
+	set_control_par(get_ui_id($debug_monitor),$CONTROL_PAR_POS_X,345)
+	set_control_par(get_ui_id($debug_monitor),$CONTROL_PAR_POS_Y,1)
+	{/debug}	
+
 	{Velocity Curves
 	--------------------------
 	The number of the row is the Note Number,
@@ -229,9 +237,9 @@ on init
 	{/Velocity Curves}
 	
 	{!!!START TESTING PART1!!!}
-		{set_ui_height_px(300)}
+		set_ui_height_px(300)
 		
-{		declare ui_knob $point_1_in (1, 127, 1)
+		declare ui_knob $point_1_in (1, 127, 1)
 		declare ui_knob $point_1_out (1, 127, 1)
 		declare ui_knob $point_2_in (1, 127, 1)
 		declare ui_knob $point_2_out (1, 127, 1)
@@ -263,7 +271,7 @@ on init
 		declare ui_value_edit $note (0, 127, $VALUE_EDIT_MODE_NOTE_NAMES)
 		move_control_px($note, 70, 215)	
 
-		make_persistent(%note_curve)
+		{make_persistent(%note_curve)}
 		
 		declare %sd_controls_ui_id[9]
 		%sd_controls_ui_id[0] := get_ui_id($point_1_in)
@@ -276,7 +284,7 @@ on init
 		%sd_controls_ui_id[7] := get_ui_id(%table)
 		%sd_controls_ui_id[8] := get_ui_id($note)
 		
-		$count_1 := 0
+		{$count_1 := 0
 		while ($count_1 < 9)
 			set_control_par(%sd_controls_ui_id[$count_1], $CONTROL_PAR_HIDE, $HIDE_WHOLE_CONTROL)
 			inc($count_1)
@@ -1231,7 +1239,8 @@ on note
 	{/VELOCITY CURVES}
 	
 	{!!!START TESTING PART 2!!!}
-{		$note := $EVENT_NOTE
+		set_text($debug_monitor, "cur_note:" & $cur_note)
+		$note := $EVENT_NOTE
 		$point_1_in  := %note_curve[$cur_note * 6]
 		$point_1_out := %note_curve[$cur_note * 6 + 1]
 		$point_2_in  := %note_curve[$cur_note * 6 + 2]
@@ -1277,7 +1286,7 @@ on note
 			end if
 			%table[$count] := $new_velo
 			inc($count)
-		end while}
+		end while
 	{!!!END TESTING PART 2!!!}
 	
 	{SPEED ALTERNATE}
@@ -2058,7 +2067,7 @@ end on
 {END OF SCRIPT}
 
 {!!!START TESTING PART 3!!!}
-{
+
 on ui_control ($point_1_in)
 	if ($point_1_in >= %note_curve[$cur_note * 6 + 2])
 		$point_1_in := %note_curve[$cur_note * 6 + 2] - 1
@@ -2344,8 +2353,8 @@ on ui_control ($point_3_out)
 		inc($count)
 	end while
 end on
-}
-{
+
+
 on ui_control ($note)
 	$cur_note := $note
 	
@@ -2448,5 +2457,5 @@ on ui_control ($reset)
 		%table[$count_1] := $new_velo
 		inc($count_1)
 	end while
-end on}
+end on
 {!!!END TESTING PART 3!!!}
