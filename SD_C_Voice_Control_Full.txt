@@ -24,10 +24,12 @@ close: mute group for the dr1, dr2, dr3 & bld mics
 far: mute group for the kt1, kt2, kt3 & kt4 mics
 *************************************************}
 
-on init  
+on init
 	message("")
 	set_script_title("Voice Control")
-	
+
+	declare const $ZONE_LIMIT_LITE := 11000
+
 	declare $event_cursor
 	declare $temp
 	declare $choke_flag
@@ -52,20 +54,20 @@ on init
 	declare $count_4
 	declare $debug
 	{/helper variables}
-	
+
 	{debug}
 	declare ui_label $debug_monitor (1,16)
 	set_text($debug_monitor,"")
 	set_control_par(get_ui_id($debug_monitor),$CONTROL_PAR_WIDTH,240)
-	set_control_par(get_ui_id($debug_monitor),$CONTROL_PAR_HEIGHT,230)
+	set_control_par(get_ui_id($debug_monitor),$CONTROL_PAR_HEIGHT,208)
 	set_control_par(get_ui_id($debug_monitor),$CONTROL_PAR_POS_X,345)
 	set_control_par(get_ui_id($debug_monitor),$CONTROL_PAR_POS_Y,1)
 	{/debug}
-	
+
 	{Velocity Curves
 	--------------------------
 	The number of the row is the Note Number,
-	
+
 	meaning of columns:
 	#1: Point 1 Input Value
 	#2: Point 1 Output Value
@@ -73,7 +75,7 @@ on init
 	#4: Point 2 Output Value
 	#5: Point 3 Input Value
 	#6: Point 4 Output Value
-	
+
 	to adjust the velocity curves, use the testing version of this script - latest v0.024}
 	declare %note_curve[158 * 6] := (...
 	{0}		50,	32,	90,	64,	115,96,...
@@ -235,44 +237,44 @@ on init
 	{156}	32,	32,	64,	64,	96,	96,...
 	{157}	32,	32,	64,	64,	96,	96)
 	{/Velocity Curves}
-	
+
 	{!!!START TESTING PART1!!!}
-		set_ui_height_px(300)
-		
+		set_ui_height_px(250)
+
 		declare ui_knob $point_1_in (1, 127, 1)
 		declare ui_knob $point_1_out (1, 127, 1)
 		declare ui_knob $point_2_in (1, 127, 1)
 		declare ui_knob $point_2_out (1, 127, 1)
 		declare ui_knob $point_3_in (1, 127, 1)
 		declare ui_knob $point_3_out (1, 127, 1)
-		
+
 		set_text($point_1_in, "X 1")
 		set_text($point_1_out, "Y 1")
 		set_text($point_2_in, "X 2")
 		set_text($point_2_out, "Y 2")
 		set_text($point_3_in, "X 3")
 		set_text($point_3_out, "Y 3")
-		
+
 		move_control_px($point_1_in, 70, 72)
 		move_control_px($point_1_out, 70, 31)
 		move_control_px($point_2_in, 161, 72)
 		move_control_px($point_2_out, 161, 31)
 		move_control_px($point_3_in, 253, 72)
 		move_control_px($point_3_out, 253, 31)
-		
+
 		declare ui_switch $Reset
 		move_control_px($Reset, 161, 215)
-		
+
 		declare ui_table %table[128] (1,3,127)
 		set_control_par(get_ui_id(%table), $CONTROL_PAR_WIDTH, 271)
 		set_control_par(get_ui_id(%table), $CONTROL_PAR_HEIGHT, 96)
 		move_control_px(%table, 70, 113)
-		
+
 		declare ui_value_edit $note (0, 127, $VALUE_EDIT_MODE_NOTE_NAMES)
-		move_control_px($note, 70, 215)	
+		move_control_px($note, 70, 215)
 
 		{make_persistent(%note_curve)}
-		
+
 		declare %sd_controls_ui_id[9]
 		%sd_controls_ui_id[0] := get_ui_id($point_1_in)
 		%sd_controls_ui_id[1] := get_ui_id($point_1_out)
@@ -283,19 +285,19 @@ on init
 		%sd_controls_ui_id[6] := get_ui_id($Reset)
 		%sd_controls_ui_id[7] := get_ui_id(%table)
 		%sd_controls_ui_id[8] := get_ui_id($note)
-		
+
 		{$count_1 := 0
 		while ($count_1 < 9)
 			set_control_par(%sd_controls_ui_id[$count_1], $CONTROL_PAR_HIDE, $HIDE_WHOLE_CONTROL)
 			inc($count_1)
 		end while}
 	{!!!END TESTING PART1!!!}
-	
-	
+
+
 	{shared across Options, Kit & Voice Control scripts}
 	declare const $NUM_INSTRUMENTS := 20
 	declare const $MAX_NUM_TOTAL_ART := 126
-	
+
 	declare const $KICK_ID := 0
 	declare const $SNARE_ID := 1
 	declare const $HH_ID := 2
@@ -317,7 +319,7 @@ on init
 	declare const $PERC4_ID := 18
 	declare const $PERC5_ID := 19
 	declare const $END_ID := 20
-	
+
 	declare !INSTRUMENT_NAMES[20]
 	!INSTRUMENT_NAMES[$KICK_ID] := "KICK"
 	!INSTRUMENT_NAMES[$SNARE_ID] := "SNARE"
@@ -339,7 +341,7 @@ on init
 	!INSTRUMENT_NAMES[$PERC3_ID] := "TAMBOURINE"{*}
 	!INSTRUMENT_NAMES[$PERC4_ID] := "COWBELL"	{*}
 	!INSTRUMENT_NAMES[$PERC5_ID] := "PERC 5"	{*}
-	
+
 	{constants that are to be set per kit}
 	declare %KEY_USED[128] := (1)			{which notes are used for this kit: 0 -> note is not used
 																				1 -> note is used}
@@ -399,7 +401,7 @@ on init
 	%KEY_USED[125] := 0
 	%KEY_USED[126] := 0
 	%KEY_USED[127] := 0
-	
+
 											{max value}
 	declare const $NUM_KIT_MICS := 3			{4}
 	declare const $NUM_SNARE_INSTRUMENTS := 2	{3}
@@ -425,7 +427,7 @@ on init
 	%NUM_DIR_MICS[$PERC3_ID] := 1				{1}
 	%NUM_DIR_MICS[$PERC4_ID] := 1				{1}
 	%NUM_DIR_MICS[$PERC5_ID] := -1				{1}
-	
+
 	declare %NUM_ART[$NUM_INSTRUMENTS]
 	%NUM_ART[$KICK_ID] := 2						{4}
 	%NUM_ART[$SNARE_ID] := 12					{15}
@@ -448,7 +450,7 @@ on init
 	%NUM_ART[$PERC4_ID] := 4					{3}
 	%NUM_ART[$PERC5_ID] := 0					{3}
 	{/constants that are to be set per kit}
-	
+
 	{the MIDI note the first articulation each one of the instruments is mapped to - according to the technical mapping}
 	declare %INSTRUMENT_OFFSET[$NUM_INSTRUMENTS + 1] := (-1)
 	%INSTRUMENT_OFFSET[$KICK_ID] := 0
@@ -467,7 +469,7 @@ on init
 	%INSTRUMENT_OFFSET[$CYMB6_ID] := 91
 	%INSTRUMENT_OFFSET[$CYMB7_ID] := 95
 	%INSTRUMENT_OFFSET[$PERC1_ID] := 99
-	
+
 	{constants that are to be set per kit}
 	%INSTRUMENT_OFFSET[$PERC2_ID] := 100
 	%INSTRUMENT_OFFSET[$PERC3_ID] := 102
@@ -475,11 +477,11 @@ on init
 	%INSTRUMENT_OFFSET[$PERC5_ID] := 113
 	%INSTRUMENT_OFFSET[$END_ID] := 113
 	{/constants that are to be set per kit}
-	
+
 	{Group Lists per Articulation
 	-----------------------------
 	The number of the row is the note number the articulation is assigned to (refer to the technical mapping document).
-	
+
 	meaning of columns:
 	#1: Group index of the 1st Direct mic of the articulation
 	#2: Group index of the 2nd Direct mic of the articulation
@@ -488,9 +490,9 @@ on init
 	#5: Group index of the 1st Kit mic of the articulation
 	#6: Group index of the 2nd Kit mic of the articulation
 	#7: Group index of the 3rd Kit mic of the articulation
-	#8: Group index of the 4th Kit mic of the articulation	
-	
-	Note: 	If a certain mic type is not available (eg, Snare Bleed for the snare hits), 
+	#8: Group index of the 4th Kit mic of the articulation
+
+	Note: 	If a certain mic type is not available (eg, Snare Bleed for the snare hits),
 			-1 is going	to be used in the respective column.}
 
 	declare %GROUP_DATA[$MAX_NUM_TOTAL_ART * 8] := (...
@@ -620,10 +622,10 @@ on init
 						{123}  -1, -1, -1, -1, -1, -1, -1, -1,...
 						{124}  -1, -1, -1, -1, -1, -1, -1, -1,...
 						{125}  -1, -1, -1, -1, -1, -1, -1, -1)
-	
-	
-	
-	
+
+
+
+
 	{CHOKE KEYS - if these notes are played, all events of their associated group will be faded}
 	declare const $CYMB1_CHOKE := 74
 	declare const $CYMB2_CHOKE := 78
@@ -632,7 +634,7 @@ on init
 	declare const $CYMB5_CHOKE := 90
 	declare const $CYMB6_CHOKE := 94
 	declare const $CYMB7_CHOKE := 98
-	
+
 	{Instruments per note}
 	declare %note_instruments[128] := (-1) {which key belongs to which instrument}
 	$count_1 := 0
@@ -645,10 +647,10 @@ on init
 		inc($count_1)
 	end while
 	{/shared across Options, Kit & Voice Control scripts}
-	
+
 	declare const $OP_HH_ID := $NUM_INSTRUMENTS		{as the only instrument that should be separated in two voice groups is the hh,
 													a new ID is introduced for this script}
-	
+
 	{special case for the open hihats}
 	$count_1 := 29
 	while ($count_1 < 36)
@@ -656,7 +658,7 @@ on init
 		inc($count_1)
 	end while
 	{/Instruments per note}
-	
+
 	{Instrument Mixer Channels
 	The direct channels of each one of the instruments, according to the CHANNEL_PURGE_STATE PGS key created in the mixer page
 	to be set per kit}
@@ -683,30 +685,30 @@ on init
 	%instr_channel[$PERC4_ID] := 8
 	%instr_channel[$PERC5_ID] := -1
 	{/Instrument Mixer Channels}
-		
+
 		{START CONFIGURATION}
-		
+
 		{Speed Alternation time in milliseconds}
 		declare const $SPEED_ALT_TIME := 160
-		
+
 		{OPEN HIHAT CHOKING FADE TIMES}
 		declare const $FAR_OHH_FADE_TIME := 100
 		declare const $CLOSE_OHH_FADE_TIME := 50
-		
+
 		{HIHAT CONTROLLER}
 		declare const $HIHAT_1ST_CC := 1 {Mod Wheel}
 		declare const $HIHAT_2ND_CC := 4 {Hihat Pedal Controller}
 		declare const $HIHAT_NOTE := 30
 		declare $hihat_state := 0
-		
+
 		{SNARE POSITION SENSING}
 		declare const $SNARE_CC := 16
 		declare const $SNARE_NOTE := 4 {Bb1}
-		
+
 		{VOICE CONTROL IMPLEMENTATION}
 		{Note: all fadetimes are in milliseconds!}
-		
-		{*****KEY*****}			
+
+		{*****KEY*****}
 		{loud -> soft: determines the threshold of the velocity difference before the fading kicks in, i.e. only velocity differencec below this number will be faded}
 		declare %note_key_threshold[128] := (...
 		{C-2} 30,  30,  30,  30,  30,  30,  30,  30,  30,  30,  30,  30,...
@@ -721,7 +723,7 @@ on init
 		{C7}  30,  30,  30,  30,  30,  30,  30,  30,  30,  30,  30,  30,...
 		{C8}  30,  30,  30,  30,  30,  30,  30,  30){ Ab    A   Bb    B}
 			 {C    Db    D   Eb    E    F   Gb    G}
-			 
+
 		declare %note_grp_threshold[$NUM_INSTRUMENTS + 1] := (...
 		{0}   30,  30,...
 		{2}   40,  40,...
@@ -734,7 +736,7 @@ on init
 		{16}  30,  30,...
 		{18}  30,  30,...
 		{20}  30)
-			 
+
 		declare %close_key_min_fadetimes[128] := (...
 		{C-2} 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,...
 		{C-1} 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,...
@@ -748,7 +750,7 @@ on init
 		{C7}  10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,...
 		{C8}  10, 10, 10, 10, 10, 10, 10, 10)   {A}  {B}
 			  {C}     {D}     {E} {F}    {G}
-		
+
 		declare %close_key_max_fadetimes[128] := (...
 		{C-2}  500, 500, 500, 500, 350, 350, 350, 350, 350, 350, 500, 500,...
 		{C-1}  500, 350, 350, 350, 500, 500, 500, 200, 200, 200, 200, 200,...
@@ -762,7 +764,7 @@ on init
 		{C7}   500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500,...
 		{C8}   500, 500, 500, 500, 500, 500, 500, 500){Ab}  {A}  {Bb}  {B}
 			  {C}  {Db} {D}  {Eb}  {E} {F}  {Gb}  {G}
-		
+
 		declare %far_key_min_fadetimes[128] := (...
 		{C-2}  50,  50,  50,  50,  50,  50,  50,  50,  50,  50,  50,  50,...
 		{C-1}  50,  50,  50,  50,  50,  50,  50,  50,  50,  50,  50,  50,...
@@ -776,7 +778,7 @@ on init
 		{C7}   50,  50,  50,  50,  50,  50,  50,  50,  50,  50,  50,  50,...
 		{C8}   50,  50,  50,  50,  50,  50,  50,  50) {Ab}  {A} {Bb}  {B}
 			  {C}  {Db}  {D} {Eb}  {E}  {F} {Gb}  {G}
-		
+
 		declare %far_key_max_fadetimes[128] := (...
 		{C-2}  800, 800, 800, 800, 700, 700, 700, 700, 700, 700, 800, 800,...
 		{C-1}  800, 700, 700, 700, 800, 800, 800, 600, 600, 600, 600, 600,...
@@ -789,8 +791,8 @@ on init
 		{C6}  3000,3000,1000, 600, 700, 700, 800, 800, 800, 800, 800, 800,...
 		{C7}   800, 800, 800, 800, 800, 800, 800, 800, 800, 800, 800, 800,...
 		{C8}   800, 800, 800, 800, 800, 800, 800, 800) {Ab} {A} {Bb}  {B}
-			  {C}  {Db}  {D} {Eb}  {E}  {F}  {Gb} {G}  
-		
+			  {C}  {Db}  {D} {Eb}  {E}  {F}  {Gb} {G}
+
 		declare %close_grp_min_fadetimes[$NUM_INSTRUMENTS + 1] := (...
 		{0}  10, 100,...
 		{2} 100, 100,...
@@ -803,7 +805,7 @@ on init
 		{16} 50,  50,...
 		{18} 50,  50,...
 		{20} 50)
-		
+
 		declare %close_grp_max_fadetimes[$NUM_INSTRUMENTS + 1] := (...
 		{0}  500, 800,...
 		{2}  350, 400,...
@@ -816,7 +818,7 @@ on init
 		{16} 700, 700,...
 		{18} 700, 700,...
 		{20} 700)
-		
+
 		declare %far_grp_min_fadetimes[$NUM_INSTRUMENTS + 1] := (...
 		{0}   50, 150,...
 		{2}  150, 150,...
@@ -829,7 +831,7 @@ on init
 		{16} 100, 100,...
 		{18} 100, 100,...
 		{20} 100)
-		
+
 		declare %far_grp_max_fadetimes[$NUM_INSTRUMENTS + 1] := (...
 		{0}  800,1500,...
 		{2}  700,1000,...
@@ -843,11 +845,11 @@ on init
 		{18}1000,1000,...
 		{20}1000)
 		{END VOICE CONTROL}
-		
+
 		declare const $MAX_NOTES := 256
 		declare %all_notes[$MAX_NOTES]
 		{array that keeps all sounding notes}
-		
+
 		{CYMBAL EDGE KEYS - those are never faded by other articulations of the same instrument}
 		declare const $CYMB1_EDGE := 71
 		declare const $CYMB2_EDGE := 75
@@ -856,7 +858,7 @@ on init
 		declare const $CYMB5_EDGE := 87
 		declare const $CYMB6_EDGE := 91
 		declare const $CYMB7_EDGE := 95
-		
+
 		{RIM ONLY KEYS - those keys never fade any other keys}
 		declare const $SNARE_RIM := 15
 		declare const $TOM1_RIM := 40
@@ -864,7 +866,7 @@ on init
 		declare const $TOM3_RIM := 54
 		declare const $TOM4_RIM := 61
 		declare const $TOM5_RIM := 68
-	 	
+
 		declare %close_mutegroups[$NUM_INSTRUMENTS + 1]
 		%close_mutegroups[$KICK_ID] := 0
 		%close_mutegroups[$SNARE_ID] := 1
@@ -887,7 +889,7 @@ on init
 		%close_mutegroups[$PERC3_ID] := 18
 		%close_mutegroups[$PERC4_ID] := 19
 		%close_mutegroups[$PERC5_ID] := 20
-		
+
 		declare %far_mutegroups[$NUM_INSTRUMENTS + 1]
 		%far_mutegroups[$KICK_ID] := 21
 		%far_mutegroups[$SNARE_ID] := 22
@@ -910,7 +912,7 @@ on init
 		%far_mutegroups[$PERC3_ID] := 39
 		%far_mutegroups[$PERC4_ID] := 40
 		%far_mutegroups[$PERC5_ID] := 41
-		
+
 		declare %close_flex_mutegroups[$NUM_INSTRUMENTS + 1]
 		%close_flex_mutegroups[$KICK_ID] := 42
 		%close_flex_mutegroups[$SNARE_ID] := 43
@@ -933,7 +935,7 @@ on init
 		%close_flex_mutegroups[$PERC3_ID] := 60
 		%close_flex_mutegroups[$PERC4_ID] := 61
 		%close_flex_mutegroups[$PERC5_ID] := 62
-		
+
 		declare %far_flex_mutegroups[$NUM_INSTRUMENTS + 1]
 		%far_flex_mutegroups[$KICK_ID] := 63
 		%far_flex_mutegroups[$SNARE_ID] := 64
@@ -956,8 +958,8 @@ on init
 		%far_flex_mutegroups[$PERC3_ID] := 81
 		%far_flex_mutegroups[$PERC4_ID] := 82
 		%far_flex_mutegroups[$PERC5_ID] := 83
-		
-		
+
+
 		{Amount of variations per note}
 		declare %note_variations[128] := (...
 		4,...
@@ -1089,7 +1091,7 @@ on init
 		1,...
 		1)
 
-		    
+
 		{which notes are affected by left/right alternation}
 		declare %note_alternate[128]
 		%note_alternate[4] := 1  {e.g. D1 will trigger left/right}
@@ -1102,9 +1104,9 @@ on init
 		%note_alternate[50] := 1
 		%note_alternate[57] := 1
 		%note_alternate[64] := 1
-		
+
 		{END CONFIGURATION}
-		
+
 	declare ui_label $label (3, 1)
 	set_text($label, "Studio Drummer Voice Control Engine")
 
@@ -1117,7 +1119,7 @@ on init
 	declare $kt2_note_id
 	declare $kt3_note_id
 	declare $kt4_note_id
-	
+
 	declare $dr1_grp_id
 	declare $dr2_grp_id
 	declare $dr3_grp_id
@@ -1126,7 +1128,7 @@ on init
 	declare $kt2_grp_id
 	declare $kt3_grp_id
 	declare $kt4_grp_id
-	
+
 	declare %dr1_note_ids[128] {stores the id per key}
 	declare %dr2_note_ids[128]
 	declare %dr3_note_ids[128]
@@ -1135,7 +1137,7 @@ on init
 	declare %kt2_note_ids[128]
 	declare %kt3_note_ids[128]
 	declare %kt4_note_ids[128]
-	
+
 	{various variables}
 	declare %random_count_1er[128]
 	declare %last_random_count_1er[128]
@@ -1147,12 +1149,12 @@ on init
 	declare %alt_last_time[128]
 	declare %alt_count_1[128]
 	declare $play_alternate {1 if other hand should be played. Note: also used for HiHat}
-	
+
 	{Randomization Amounts}
 	declare $pitch_rand_amt
-	
+
 	declare const $DIRECT_MIC_RATIO := 20	{percent}
-	
+
 	declare %RAND_AMT[$NUM_INSTRUMENTS + 1]
 	%RAND_AMT[$KICK_ID] := 1000
 	%RAND_AMT[$SNARE_ID] := 1000
@@ -1178,20 +1180,20 @@ on init
 	{/Randomization Amounts}
 end on
 
-on note 
+on note
 	{if ($message_time < $ENGINE_UPTIME - 3000)
 		message("")
 	end if}
 
 	ignore_event($EVENT_ID)
 	disallow_group($ALL_GROUPS)
-	
+
 	if (%note_instruments[$EVENT_NOTE] = -1)
 		exit
 	end if
-	
+
 	$actual_inst := %note_instruments[$EVENT_NOTE]
-	
+
 	{VELOCITY CURVES}
 	if ($actual_inst = $SNARE_ID and pgs_get_key_val(ACTIVE_SNARE, 0) # 0)
 		select (pgs_get_key_val(ACTIVE_SNARE, 0))
@@ -1205,19 +1207,19 @@ on note
 	end if
 	$cur_velo := $EVENT_VELOCITY
 	if ($EVENT_VELOCITY < %note_curve[$cur_note * 6])
-		$x1 := 1	 
+		$x1 := 1
 		$y1 := 1
 		$x2 := %note_curve[$cur_note * 6]
 		$y2 := %note_curve[$cur_note * 6 + 1]
 	else
 		if ($EVENT_VELOCITY < %note_curve[$cur_note * 6 + 2])
-			$x1 := %note_curve[$cur_note * 6]	 
+			$x1 := %note_curve[$cur_note * 6]
 			$y1 := %note_curve[$cur_note * 6 + 1]
 			$x2 := %note_curve[$cur_note * 6 + 2]
 			$y2 := %note_curve[$cur_note * 6 + 3]
 		else
 			if ($EVENT_VELOCITY < %note_curve[$cur_note * 6 + 4])
-				$x1 := %note_curve[$cur_note * 6 + 2]	 
+				$x1 := %note_curve[$cur_note * 6 + 2]
 				$y1 := %note_curve[$cur_note * 6 + 3]
 				$x2 := %note_curve[$cur_note * 6 + 4]
 				$y2 := %note_curve[$cur_note * 6 + 5]
@@ -1229,7 +1231,7 @@ on note
 			end if
 		end if
 	end if
-	
+
 	$new_velo := ($y2 - $y1) * ($cur_velo - $x2) / ($x2 - $x1) + $y2
 	if ($new_velo > 127)
 		$new_velo := 127
@@ -1240,7 +1242,7 @@ on note
 	end if
 	change_velo($EVENT_ID, $new_velo)
 	{/VELOCITY CURVES}
-	
+
 	{!!!START TESTING PART 2!!!}
 		set_text($debug_monitor, "cur_note:" & $cur_note)
 		$note := $EVENT_NOTE
@@ -1250,23 +1252,23 @@ on note
 		$point_2_out := %note_curve[$cur_note * 6 + 3]
 		$point_3_in  := %note_curve[$cur_note * 6 + 4]
 		$point_3_out := %note_curve[$cur_note * 6 + 5]
-		
+
 		$count := 0
 		while ($count < 128)
 			if ($count < %note_curve[$cur_note * 6])
-				$x1 := 1	 
+				$x1 := 1
 				$y1 := 1
 				$x2 := %note_curve[$cur_note * 6]
 				$y2 := %note_curve[$cur_note * 6 + 1]
 			else
 				if ($count < %note_curve[$cur_note * 6 + 2])
-					$x1 := %note_curve[$cur_note * 6]	 
+					$x1 := %note_curve[$cur_note * 6]
 					$y1 := %note_curve[$cur_note * 6 + 1]
 					$x2 := %note_curve[$cur_note * 6 + 2]
 					$y2 := %note_curve[$cur_note * 6 + 3]
 				else
 					if ($count < %note_curve[$cur_note * 6 + 4])
-						$x1 := %note_curve[$cur_note * 6 + 2]	 
+						$x1 := %note_curve[$cur_note * 6 + 2]
 						$y1 := %note_curve[$cur_note * 6 + 3]
 						$x2 := %note_curve[$cur_note * 6 + 4]
 						$y2 := %note_curve[$cur_note * 6 + 5]
@@ -1278,7 +1280,7 @@ on note
 					end if
 				end if
 			end if
-			
+
 			$new_velo := ($y2 - $y1) * ($count - $x2) / ($x2 - $x1) + $y2
 			if ($new_velo > 127)
 				$new_velo := 127
@@ -1291,11 +1293,11 @@ on note
 			inc($count)
 		end while
 	{!!!END TESTING PART 2!!!}
-	
+
 	{SPEED ALTERNATE}
 	if (%note_alternate[$EVENT_NOTE] = 1)
 		if ($ENGINE_UPTIME - %alt_last_time[$EVENT_NOTE] < $SPEED_ALT_TIME and %alt_last_time[$EVENT_NOTE] # 0)
-			
+
 			{speed alternation active}
 			if (%alt_count_1[$EVENT_NOTE] = 0)
 				$play_alternate := 1 {Att: right note}
@@ -1304,7 +1306,7 @@ on note
 				$play_alternate := 0 {left, i.e. normal note}
 				%alt_count_1[$EVENT_NOTE] := 0
 			end if
-			
+
 		else
 			{speed alternation inactive}
 			$play_alternate := 0 {left, i.e. normal note}
@@ -1314,7 +1316,7 @@ on note
 		if ($EVENT_NOTE = $SNARE_NOTE and %CC[$SNARE_CC] > 64)
 			$play_alternate := $play_alternate + 2
 		end if
-		
+
 		%alt_last_time[$EVENT_NOTE] := $ENGINE_UPTIME
 	else
 		{HIHAT}
@@ -1325,9 +1327,9 @@ on note
 		end if
 	end if
 	{END SPEED ALTERNATION}
-	
+
 	{!!!START TESTING PART2!!!}
-	
+
 	{!!!END TESTING PART2!!!}
 
 	$dr1_grp_id := %GROUP_DATA[$EVENT_NOTE * 8 + 0]
@@ -1337,8 +1339,8 @@ on note
 	$kt1_grp_id := %GROUP_DATA[$EVENT_NOTE * 8 + 4]
 	$kt2_grp_id := %GROUP_DATA[$EVENT_NOTE * 8 + 5]
 	$kt3_grp_id := %GROUP_DATA[$EVENT_NOTE * 8 + 6]
-	$kt4_grp_id := %GROUP_DATA[$EVENT_NOTE * 8 + 7]	
-	
+	$kt4_grp_id := %GROUP_DATA[$EVENT_NOTE * 8 + 7]
+
 	if ($actual_inst = $SNARE_ID and pgs_get_key_val(ACTIVE_SNARE, 0) # 0)
 		if ($dr1_grp_id > -1)
 			$dr1_grp_id := $dr1_grp_id + pgs_get_key_val(ACTIVE_SNARE, 0)
@@ -1365,16 +1367,18 @@ on note
 			$kt4_grp_id := $kt4_grp_id + pgs_get_key_val(ACTIVE_SNARE, 0)
 		end if
 	end if
-	
+
 	{Note Variation}
-	if (%note_variations[$EVENT_NOTE] > 1)
-		while (%random_count_1er[$EVENT_NOTE] = %last_random_count_1er[$EVENT_NOTE])
-			%random_count_1er[$EVENT_NOTE] := random(0,%note_variations[$EVENT_NOTE]-1)
-		end while
-	else
-		%random_count_1er[$EVENT_NOTE] := 0
+	if ($NUM_ZONES > $ZONE_LIMIT_LITE)
+		if (%note_variations[$EVENT_NOTE] > 1)
+			while (%random_count_1er[$EVENT_NOTE] = %last_random_count_1er[$EVENT_NOTE])
+				%random_count_1er[$EVENT_NOTE] := random(0,%note_variations[$EVENT_NOTE]-1)
+			end while
+		else
+			%random_count_1er[$EVENT_NOTE] := 0
+		end if
 	end if
-	
+
 	{Optimization Articulation Offset Hack}
 	if (%note_instruments[$EVENT_NOTE] = $OP_HH_ID)
 		$count_1 := 19
@@ -1408,32 +1412,32 @@ on note
 	end while
 
 	{if the %all_notes array is close to full - flush it and give a warning}
-	if ($event_cursor >= $MAX_NOTES - 10) 
+	if ($event_cursor >= $MAX_NOTES - 10)
 		$b := $event_cursor
 		$count_1 := 0
 		$event_cursor := 0
 		while ($count_1 < $b)
 			if($count_1 < 10)
-				fade_out(%all_notes[$count_1], 10000, 1)  
+				fade_out(%all_notes[$count_1], 10000, 1)
 			else
 				%all_notes[$event_cursor] := %all_notes[$count_1]
-				inc($event_cursor)			
+				inc($event_cursor)
 			end if
 			inc($count_1)
 		end while
 		{message("Voice Overflow - All Voices Killed")}  {the message should be deleted after a while e.g. 3 seconds}
 		$message_time := $ENGINE_UPTIME
-	end if	
-	
-	
+	end if
+
+
 	{VOICE CONTROL START}
-	
+
 	$count_1 := 0
 	while ($count_1 < 128)
 		if (%note_instruments[$count_1] = $actual_inst) {find the note numbers of the same instrument}
-			
+
 			{START DR1}
-			if (event_status(%dr1_note_ids[$count_1]) = $EVENT_STATUS_NOTE_QUEUE) 
+			if (event_status(%dr1_note_ids[$count_1]) = $EVENT_STATUS_NOTE_QUEUE)
 				{*** the same note: KEY}
 				if ($count_1 = $EVENT_NOTE)
 					$velo_diff := $EVENT_VELOCITY - %last_velo[$EVENT_NOTE]
@@ -1471,9 +1475,9 @@ on note
 				end if
 			end if
 			{END DR1}
-			
+
 			{START DR2}
-			if (event_status(%dr2_note_ids[$count_1]) = $EVENT_STATUS_NOTE_QUEUE) 
+			if (event_status(%dr2_note_ids[$count_1]) = $EVENT_STATUS_NOTE_QUEUE)
 				{*** the same note: KEY}
 				if ($count_1 = $EVENT_NOTE)
 					$velo_diff := $EVENT_VELOCITY - %last_velo[$EVENT_NOTE]
@@ -1511,9 +1515,9 @@ on note
 				end if
 			end if
 			{END DR2}
-			
+
 			{START DR3}
-			if (event_status(%dr3_note_ids[$count_1]) = $EVENT_STATUS_NOTE_QUEUE) 
+			if (event_status(%dr3_note_ids[$count_1]) = $EVENT_STATUS_NOTE_QUEUE)
 				{*** the same note: KEY}
 				if ($count_1 = $EVENT_NOTE)
 					$velo_diff := $EVENT_VELOCITY - %last_velo[$EVENT_NOTE]
@@ -1551,7 +1555,7 @@ on note
 				end if
 			end if
 			{END DR3}
-			
+
 			{START BLD}
 			if (event_status(%bld_note_ids[$count_1]) = $EVENT_STATUS_NOTE_QUEUE)
 				{*** the same note: KEY}
@@ -1591,9 +1595,9 @@ on note
 				end if
 			end if
 			{END BLD}
-			
+
 			{START KT1}
-			if (event_status(%kt1_note_ids[$count_1]) = $EVENT_STATUS_NOTE_QUEUE) 
+			if (event_status(%kt1_note_ids[$count_1]) = $EVENT_STATUS_NOTE_QUEUE)
 				{*** the same note: KEY}
 				if ($count_1 = $EVENT_NOTE)
 					$velo_diff := $EVENT_VELOCITY - %last_velo[$EVENT_NOTE]
@@ -1631,9 +1635,9 @@ on note
 				end if
 			end if
 			{END KT1}
-			
+
 			{START KT2}
-			if (event_status(%kt2_note_ids[$count_1]) = $EVENT_STATUS_NOTE_QUEUE) 
+			if (event_status(%kt2_note_ids[$count_1]) = $EVENT_STATUS_NOTE_QUEUE)
 				{*** the same note: KEY}
 				if ($count_1 = $EVENT_NOTE)
 					$velo_diff := $EVENT_VELOCITY - %last_velo[$EVENT_NOTE]
@@ -1671,9 +1675,9 @@ on note
 				end if
 			end if
 			{END KT2}
-			
+
 			{START KT3}
-			if (event_status(%kt3_note_ids[$count_1]) = $EVENT_STATUS_NOTE_QUEUE) 
+			if (event_status(%kt3_note_ids[$count_1]) = $EVENT_STATUS_NOTE_QUEUE)
 				{*** the same note: KEY}
 				if ($count_1 = $EVENT_NOTE)
 					$velo_diff := $EVENT_VELOCITY - %last_velo[$EVENT_NOTE]
@@ -1711,9 +1715,9 @@ on note
 				end if
 			end if
 			{END KT3}
-			
+
 			{START KT4}
-			if (event_status(%kt4_note_ids[$count_1]) = $EVENT_STATUS_NOTE_QUEUE) 
+			if (event_status(%kt4_note_ids[$count_1]) = $EVENT_STATUS_NOTE_QUEUE)
 				{*** the same note: KEY}
 				if ($count_1 = $EVENT_NOTE)
 					$velo_diff := $EVENT_VELOCITY - %last_velo[$EVENT_NOTE]
@@ -1751,11 +1755,11 @@ on note
 				end if
 			end if
 			{END KT4}
-			
+
 		end if
 		inc($count_1)
 	end while
-	
+
 	$cur_velo := $EVENT_VELOCITY
 	$choke_flag := 0
 	$choke_edge := 2
@@ -1826,7 +1830,7 @@ on note
 		end if
 	end if
 	{END VOICE CONTROL}
-	
+
 	if (pgs_key_exists(CHANNEL_PURGE_STATE) or pgs_key_exists(CHANNEL_MUTE_STATE))
 		{Trigger Direct 1}
 		if ($dr1_grp_id > -1 and pgs_get_key_val(CHANNEL_PURGE_STATE, %instr_channel[$actual_inst]) = 1 and pgs_get_key_val(CHANNEL_MUTE_STATE, %instr_channel[$actual_inst]) = 1)
@@ -2015,10 +2019,10 @@ on note
 			inc($event_cursor)
 		end if
 	end if
-	
+
 	{FOR NEXT EVENT}
 	%last_random_count_1er[$EVENT_NOTE] := %random_count_1er[$EVENT_NOTE]
-	
+
 	if ($EVENT_NOTE = $CYMB1_EDGE or ...
 		$EVENT_NOTE = $CYMB2_EDGE or ...
 		$EVENT_NOTE = $CYMB3_EDGE or ...
@@ -2043,7 +2047,7 @@ on note
 			set_event_par($kt4_note_id, $EVENT_PAR_3, 1)
 		end if
 	end if
-	
+
 	%last_velo_inst[$actual_inst] := $EVENT_VELOCITY
  	%last_velo[$EVENT_NOTE] := $EVENT_VELOCITY
 end on
@@ -2051,7 +2055,7 @@ end on
 
 on release
 	if ($EVENT_NOTE = 43 or $EVENT_NOTE = 44 or $EVENT_NOTE = 13)
-		fade_out(by_marks($MARK_1) ,60000,1)   
+		fade_out(by_marks($MARK_1) ,60000,1)
 	end if
 end on
 
@@ -2075,25 +2079,25 @@ on ui_control ($point_1_in)
 	if ($point_1_in >= %note_curve[$cur_note * 6 + 2])
 		$point_1_in := %note_curve[$cur_note * 6 + 2] - 1
 	end if
-	
+
 	%note_curve[$cur_note * 6] := $point_1_in
-	
+
 	$count := 0
 	while ($count < 128)
 		if ($count < %note_curve[$cur_note * 6])
-			$x1 := 1	 
+			$x1 := 1
 			$y1 := 1
 			$x2 := %note_curve[$cur_note * 6]
 			$y2 := %note_curve[$cur_note * 6 + 1]
 		else
 			if ($count < %note_curve[$cur_note * 6 + 2])
-				$x1 := %note_curve[$cur_note * 6]	 
+				$x1 := %note_curve[$cur_note * 6]
 				$y1 := %note_curve[$cur_note * 6 + 1]
 				$x2 := %note_curve[$cur_note * 6 + 2]
 				$y2 := %note_curve[$cur_note * 6 + 3]
 			else
 				if ($count < %note_curve[$cur_note * 6 + 4])
-					$x1 := %note_curve[$cur_note * 6 + 2]	 
+					$x1 := %note_curve[$cur_note * 6 + 2]
 					$y1 := %note_curve[$cur_note * 6 + 3]
 					$x2 := %note_curve[$cur_note * 6 + 4]
 					$y2 := %note_curve[$cur_note * 6 + 5]
@@ -2105,7 +2109,7 @@ on ui_control ($point_1_in)
 				end if
 			end if
 		end if
-		
+
 		$new_velo := ($y2 - $y1) * ($count - $x2) / ($x2 - $x1) + $y2
 		if ($new_velo > 127)
 			$new_velo := 127
@@ -2114,7 +2118,7 @@ on ui_control ($point_1_in)
 				$new_velo := 1
 			end if
 		end if
-		
+
 		%table[$count] := $new_velo
 		inc($count)
 	end while
@@ -2122,23 +2126,23 @@ end on
 
 on ui_control ($point_1_out)
 	%note_curve[$cur_note * 6 + 1] := $point_1_out
-	
+
 	$count := 0
 	while ($count < 128)
 		if ($count < %note_curve[$cur_note * 6])
-			$x1 := 1	 
+			$x1 := 1
 			$y1 := 1
 			$x2 := %note_curve[$cur_note * 6]
 			$y2 := %note_curve[$cur_note * 6 + 1]
 		else
 			if ($count < %note_curve[$cur_note * 6 + 2])
-				$x1 := %note_curve[$cur_note * 6]	 
+				$x1 := %note_curve[$cur_note * 6]
 				$y1 := %note_curve[$cur_note * 6 + 1]
 				$x2 := %note_curve[$cur_note * 6 + 2]
 				$y2 := %note_curve[$cur_note * 6 + 3]
 			else
 				if ($count < %note_curve[$cur_note * 6 + 4])
-					$x1 := %note_curve[$cur_note * 6 + 2]	 
+					$x1 := %note_curve[$cur_note * 6 + 2]
 					$y1 := %note_curve[$cur_note * 6 + 3]
 					$x2 := %note_curve[$cur_note * 6 + 4]
 					$y2 := %note_curve[$cur_note * 6 + 5]
@@ -2150,7 +2154,7 @@ on ui_control ($point_1_out)
 				end if
 			end if
 		end if
-		
+
 		$new_velo := ($y2 - $y1) * ($count - $x2) / ($x2 - $x1) + $y2
 		if ($new_velo > 127)
 			$new_velo := 127
@@ -2159,12 +2163,12 @@ on ui_control ($point_1_out)
 				$new_velo := 1
 			end if
 		end if
-		
+
 		%table[$count] := $new_velo
 		inc($count)
 	end while
 end on
-	
+
 on ui_control ($point_2_in)
 	if ($point_2_in >= %note_curve[$cur_note * 6 + 4])
 		$point_2_in := %note_curve[$cur_note * 6 + 4] - 1
@@ -2173,25 +2177,25 @@ on ui_control ($point_2_in)
 			$point_2_in := %note_curve[$cur_note * 6] + 1
 		end if
 	end if
-	
+
 	%note_curve[$cur_note * 6 + 2] := $point_2_in
-	
+
 	$count := 0
 	while ($count < 128)
 		if ($count < %note_curve[$cur_note * 6])
-			$x1 := 1	 
+			$x1 := 1
 			$y1 := 1
 			$x2 := %note_curve[$cur_note * 6]
 			$y2 := %note_curve[$cur_note * 6 + 1]
 		else
 			if ($count < %note_curve[$cur_note * 6 + 2])
-				$x1 := %note_curve[$cur_note * 6]	 
+				$x1 := %note_curve[$cur_note * 6]
 				$y1 := %note_curve[$cur_note * 6 + 1]
 				$x2 := %note_curve[$cur_note * 6 + 2]
 				$y2 := %note_curve[$cur_note * 6 + 3]
 			else
 				if ($count < %note_curve[$cur_note * 6 + 4])
-					$x1 := %note_curve[$cur_note * 6 + 2]	 
+					$x1 := %note_curve[$cur_note * 6 + 2]
 					$y1 := %note_curve[$cur_note * 6 + 3]
 					$x2 := %note_curve[$cur_note * 6 + 4]
 					$y2 := %note_curve[$cur_note * 6 + 5]
@@ -2203,7 +2207,7 @@ on ui_control ($point_2_in)
 				end if
 			end if
 		end if
-		
+
 		$new_velo := ($y2 - $y1) * ($count - $x2) / ($x2 - $x1) + $y2
 		if ($new_velo > 127)
 			$new_velo := 127
@@ -2212,7 +2216,7 @@ on ui_control ($point_2_in)
 				$new_velo := 1
 			end if
 		end if
-		
+
 		%table[$count] := $new_velo
 		inc($count)
 	end while
@@ -2220,23 +2224,23 @@ end on
 
 on ui_control ($point_2_out)
 	%note_curve[$cur_note * 6 + 3] := $point_2_out
-	
+
 	$count := 0
 	while ($count < 128)
 		if ($count < %note_curve[$cur_note * 6])
-			$x1 := 1	 
+			$x1 := 1
 			$y1 := 1
 			$x2 := %note_curve[$cur_note * 6]
 			$y2 := %note_curve[$cur_note * 6 + 1]
 		else
 			if ($count < %note_curve[$cur_note * 6 + 2])
-				$x1 := %note_curve[$cur_note * 6]	 
+				$x1 := %note_curve[$cur_note * 6]
 				$y1 := %note_curve[$cur_note * 6 + 1]
 				$x2 := %note_curve[$cur_note * 6 + 2]
 				$y2 := %note_curve[$cur_note * 6 + 3]
 			else
 				if ($count < %note_curve[$cur_note * 6 + 4])
-					$x1 := %note_curve[$cur_note * 6 + 2]	 
+					$x1 := %note_curve[$cur_note * 6 + 2]
 					$y1 := %note_curve[$cur_note * 6 + 3]
 					$x2 := %note_curve[$cur_note * 6 + 4]
 					$y2 := %note_curve[$cur_note * 6 + 5]
@@ -2248,7 +2252,7 @@ on ui_control ($point_2_out)
 				end if
 			end if
 		end if
-		
+
 		$new_velo := ($y2 - $y1) * ($count - $x2) / ($x2 - $x1) + $y2
 		if ($new_velo > 127)
 			$new_velo := 127
@@ -2257,7 +2261,7 @@ on ui_control ($point_2_out)
 				$new_velo := 1
 			end if
 		end if
-		
+
 		%table[$count] := $new_velo
 		inc($count)
 	end while
@@ -2267,25 +2271,25 @@ on ui_control ($point_3_in)
 	if ($point_3_in <= %note_curve[$cur_note * 6 + 2])
 		$point_3_in := %note_curve[$cur_note * 6 + 2] + 1
 	end if
-	
+
 	%note_curve[$cur_note * 6 + 4] := $point_3_in
-	
+
 	$count := 0
 	while ($count < 128)
 		if ($count < %note_curve[$cur_note * 6])
-			$x1 := 1	 
+			$x1 := 1
 			$y1 := 1
 			$x2 := %note_curve[$cur_note * 6]
 			$y2 := %note_curve[$cur_note * 6 + 1]
 		else
 			if ($count < %note_curve[$cur_note * 6 + 2])
-				$x1 := %note_curve[$cur_note * 6]	 
+				$x1 := %note_curve[$cur_note * 6]
 				$y1 := %note_curve[$cur_note * 6 + 1]
 				$x2 := %note_curve[$cur_note * 6 + 2]
 				$y2 := %note_curve[$cur_note * 6 + 3]
 			else
 				if ($count < %note_curve[$cur_note * 6 + 4])
-					$x1 := %note_curve[$cur_note * 6 + 2]	 
+					$x1 := %note_curve[$cur_note * 6 + 2]
 					$y1 := %note_curve[$cur_note * 6 + 3]
 					$x2 := %note_curve[$cur_note * 6 + 4]
 					$y2 := %note_curve[$cur_note * 6 + 5]
@@ -2297,7 +2301,7 @@ on ui_control ($point_3_in)
 				end if
 			end if
 		end if
-		
+
 		$new_velo := ($y2 - $y1) * ($count - $x2) / ($x2 - $x1) + $y2
 		if ($new_velo > 127)
 			$new_velo := 127
@@ -2306,7 +2310,7 @@ on ui_control ($point_3_in)
 				$new_velo := 1
 			end if
 		end if
-		
+
 		%table[$count] := $new_velo
 		inc($count)
 	end while
@@ -2314,23 +2318,23 @@ end on
 
 on ui_control ($point_3_out)
 	%note_curve[$cur_note * 6 + 5] := $point_3_out
-	
+
 	$count := 0
 	while ($count < 128)
 		if ($count < %note_curve[$cur_note * 6])
-			$x1 := 1	 
+			$x1 := 1
 			$y1 := 1
 			$x2 := %note_curve[$cur_note * 6]
 			$y2 := %note_curve[$cur_note * 6 + 1]
 		else
 			if ($count < %note_curve[$cur_note * 6 + 2])
-				$x1 := %note_curve[$cur_note * 6]	 
+				$x1 := %note_curve[$cur_note * 6]
 				$y1 := %note_curve[$cur_note * 6 + 1]
 				$x2 := %note_curve[$cur_note * 6 + 2]
 				$y2 := %note_curve[$cur_note * 6 + 3]
 			else
 				if ($count < %note_curve[$cur_note * 6 + 4])
-					$x1 := %note_curve[$cur_note * 6 + 2]	 
+					$x1 := %note_curve[$cur_note * 6 + 2]
 					$y1 := %note_curve[$cur_note * 6 + 3]
 					$x2 := %note_curve[$cur_note * 6 + 4]
 					$y2 := %note_curve[$cur_note * 6 + 5]
@@ -2342,7 +2346,7 @@ on ui_control ($point_3_out)
 				end if
 			end if
 		end if
-		
+
 		$new_velo := ($y2 - $y1) * ($count - $x2) / ($x2 - $x1) + $y2
 		if ($new_velo > 127)
 			$new_velo := 127
@@ -2351,7 +2355,7 @@ on ui_control ($point_3_out)
 				$new_velo := 1
 			end if
 		end if
-		
+
 		%table[$count] := $new_velo
 		inc($count)
 	end while
@@ -2360,23 +2364,23 @@ end on
 
 on ui_control ($note)
 	$cur_note := $note
-	
+
 	$count := 0
 	while ($count < 128)
 		if ($count < %note_curve[$cur_note * 6])
-			$x1 := 1	 
+			$x1 := 1
 			$y1 := 1
 			$x2 := %note_curve[$cur_note * 6]
 			$y2 := %note_curve[$cur_note * 6 + 1]
 		else
 			if ($count < %note_curve[$cur_note * 6 + 2])
-				$x1 := %note_curve[$cur_note * 6]	 
+				$x1 := %note_curve[$cur_note * 6]
 				$y1 := %note_curve[$cur_note * 6 + 1]
 				$x2 := %note_curve[$cur_note * 6 + 2]
 				$y2 := %note_curve[$cur_note * 6 + 3]
 			else
 				if ($count < %note_curve[$cur_note * 6 + 4])
-					$x1 := %note_curve[$cur_note * 6 + 2]	 
+					$x1 := %note_curve[$cur_note * 6 + 2]
 					$y1 := %note_curve[$cur_note * 6 + 3]
 					$x2 := %note_curve[$cur_note * 6 + 4]
 					$y2 := %note_curve[$cur_note * 6 + 5]
@@ -2388,7 +2392,7 @@ on ui_control ($note)
 				end if
 			end if
 		end if
-		
+
 		$new_velo := ($y2 - $y1) * ($count - $x2) / ($x2 - $x1) + $y2
 		if ($new_velo > 127)
 			$new_velo := 127
@@ -2397,7 +2401,7 @@ on ui_control ($note)
 				$new_velo := 1
 			end if
 		end if
-		
+
 		%table[$count] := $new_velo
 		inc($count)
 	end while
@@ -2419,23 +2423,23 @@ on ui_control ($reset)
 	$point_2_out := %note_curve[$cur_note * 6 + 3]
 	$point_3_in  := %note_curve[$cur_note * 6 + 4]
 	$point_3_out := %note_curve[$cur_note * 6 + 5]
-	
+
 	$count_1 := 0
 	while ($count_1 < 128)
 		if ($count_1 < %note_curve[$cur_note * 6])
-			$x1 := 1	 
+			$x1 := 1
 			$y1 := 1
 			$x2 := %note_curve[$cur_note * 6]
 			$y2 := %note_curve[$cur_note * 6 + 1]
 		else
 			if ($count_1 < %note_curve[$cur_note * 6 + 2])
-				$x1 := %note_curve[$cur_note * 6]	 
+				$x1 := %note_curve[$cur_note * 6]
 				$y1 := %note_curve[$cur_note * 6 + 1]
 				$x2 := %note_curve[$cur_note * 6 + 2]
 				$y2 := %note_curve[$cur_note * 6 + 3]
 			else
 				if ($count_1 < %note_curve[$cur_note * 6 + 4])
-					$x1 := %note_curve[$cur_note * 6 + 2]	 
+					$x1 := %note_curve[$cur_note * 6 + 2]
 					$y1 := %note_curve[$cur_note * 6 + 3]
 					$x2 := %note_curve[$cur_note * 6 + 4]
 					$y2 := %note_curve[$cur_note * 6 + 5]
@@ -2447,7 +2451,7 @@ on ui_control ($reset)
 				end if
 			end if
 		end if
-		
+
 		$new_velo := ($y2 - $y1) * ($count_1 - $x2) / ($x2 - $x1) + $y2
 		if ($new_velo > 127)
 			$new_velo := 127
@@ -2456,7 +2460,7 @@ on ui_control ($reset)
 				$new_velo := 1
 			end if
 		end if
-		
+
 		%table[$count_1] := $new_velo
 		inc($count_1)
 	end while
