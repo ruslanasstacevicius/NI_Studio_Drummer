@@ -650,6 +650,15 @@ function load_file
 		wait(1000)
 	end while
 
+	{ remove note events not present in default_mapping_data }
+	mf_get_first($track_idx)
+	while (mf_get_command() # 0)
+		if( (mf_get_command()=$MIDI_COMMAND_NOTE_ON or mf_get_command()=$MIDI_COMMAND_NOTE_OFF) and %default_mapping_data[mf_get_byte_one()]=-1)
+			mf_remove_event($CURRENT_EVENT)
+		end if
+		mf_get_next($track_idx)
+	end while
+
 	mf_get_first($track_idx)
 	$count_1 := 0
 	while (mf_get_command() # 0)
@@ -1495,7 +1504,16 @@ on pgs_changed
 					$play := 0
 					$processing_flag := 1
 					note_off($ALL_EVENTS)
-					
+
+					{ remove note events not present in default_mapping_data }
+					mf_get_first($track_idx)
+					while (mf_get_command() # 0)
+						if( (mf_get_command()=$MIDI_COMMAND_NOTE_ON or mf_get_command()=$MIDI_COMMAND_NOTE_OFF) and %default_mapping_data[mf_get_byte_one()]=-1)
+							mf_remove_event($CURRENT_EVENT)
+						end if
+						mf_get_next($track_idx)
+					end while
+
 					mf_get_first($track_idx)
 					$count_1 := 0
 					while (mf_get_command() # 0)
